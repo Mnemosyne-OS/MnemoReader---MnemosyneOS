@@ -1,6 +1,6 @@
 {
   "name": "@mnemosyne-plugins/mnemo-reader",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "type": "module",
   "description": "MnemoReader — PDF library + voice reading cartridge for Mnemosyne OS",

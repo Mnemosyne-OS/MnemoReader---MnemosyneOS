@@ -1,7 +1,7 @@
 {
   "name": "@mnemosyne-plugins/mnemo-reader",
   "displayName": "MnemoReader",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "category": "Research",
   "icon": "icon.svg",
   "vendor": "Mnemosyne Labs",
@@ -32,7 +32,7 @@
     "shell:open"
   ],
   "updateStrategy": "git",
-  "repository": "https://github.com/yaka0007/MnemoReader---MnemosyneOS",
+  "repository": "https://github.com/Mnemosyne-OS/MnemoReader---MnemosyneOS",
   "entrypoints": {
     "renderer": "index.html"
   },
