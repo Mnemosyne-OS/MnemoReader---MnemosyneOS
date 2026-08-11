@@ -93,3 +93,8 @@ src/
 
 MIT © Mnemosyne Labs. Contributions welcome — this cartridge is meant to be
 forked and remixed.
+
+---
+
+<sub>**[Mnemosyne OS](https://mnemosyne-os.io)** — the sovereign, local-first memory OS this cartridge runs in.
+Get it at [mnemosyne-os.io/download](https://mnemosyne-os.io/download), install cartridges from the built-in MnemoHub store, or [build your own](https://mnemosyne-os.io/dev).</sub>
