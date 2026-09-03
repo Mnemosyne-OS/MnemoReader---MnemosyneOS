@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocalStorage } from './lib/useLocalStorage';
+import { useI18n } from './i18n/useI18n';
+import { useSandboxCatalogue } from './hooks/useSandboxCatalogue';
 import { bridge, isFramed } from './lib/bridge';
 import {
   type Book, type LoadedBook, type ReaderSettings, DEFAULT_SETTINGS, LIBRARY_VAULT,
@@ -11,23 +13,35 @@ import { Library } from './components/Library';
 import { Reader } from './components/Reader';
 import { Toasts, type ToastMsg } from './components/Toast';
 import { ImportOverlay, type ImportJob } from './components/ImportOverlay';
+import type { OcrProgress } from './lib/bridge';
+import { ocrDetail } from './lib/ocrLabel';
 import { ConfirmDelete } from './components/ConfirmDelete';
 import { IconBook } from './components/Icons';
 import { saveText, loadText, deleteText } from './lib/textStore';
+
+/**
+ * How a long import reports itself: the phase, plus the OCR page counter when
+ * the host is reading a scan. `undefined` progress is not zero — it means this
+ * step simply has nothing countable to show.
+ */
+type PhaseReporter = (p: ImportJob['phase'], ocr?: OcrProgress) => void;
 
 const SUPPORTED = ['epub', 'pdf', 'docx', 'rtf', 'txt', 'md', 'markdown', 'rst', 'csv', 'htm', 'html', 'org'];
 const basename = (p: string) => p.split(/[\\/]/).pop() || p;
 const extOf = (p: string) => { const b = basename(p); const i = b.lastIndexOf('.'); return i >= 0 ? b.slice(i + 1).toLowerCase() : ''; };
 const newId = () => `bk_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
-/** Stable DJB2 hash — keys the per-vault idempotency map for catalogue sync. */
-const hashString = (s: string): string => {
-  let h = 5381;
-  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
-  return (h >>> 0).toString(36);
-};
 
 export default function App() {
+  const { t } = useI18n();
   const [books, setBooks] = useLocalStorage<Book[]>('books', []);
+  /**
+   * Live OCR page counters by book id. Deliberately NOT part of `books`: that
+   * array is persisted, so a counter there would survive a reload as a stale
+   * number, and every page would rewrite the whole library to localStorage.
+   */
+  const [ocrByBook, setOcrByBook] = useState<Record<string, OcrProgress>>({});
+  /** True while the user has sent the current import to the background. */
+  const backgrounded = useRef(false);
   const [settings, setSettings] = useLocalStorage<ReaderSettings>('settings', DEFAULT_SETTINGS);
   const [reader, setReader] = useState<string | null>(null);
   const [toasts, setToasts] = useState<ToastMsg[]>([]);
@@ -36,17 +50,28 @@ export default function App() {
   const [confirmDelete, setConfirmDelete] = useState<Book | null>(null);
   // Bumped after a Deep-OCR re-extract to remount the reader with the fresh text.
   const [reloadNonce, setReloadNonce] = useState(0);
-  // Name of this app's walled-off sandbox vault (`APP-MNEMO-READER`) once ensured.
-  const [sandboxVault, setSandboxVault] = useState<string | null>(null);
+
+  // The app's own vault + one chronicle per book, entirely to the side of reading.
+  useSandboxCatalogue(books);
 
   const loadedCache = useRef<Map<string, LoadedBook>>(new Map());
   const toastId = useRef(0);
 
+  /**
+   * 🚨 Only a CONFIRMATION expires. An error or a notice is the single trace of
+   * something that went wrong, and it waits for the human — "j'ai eu un message,
+   * pas eu le temps de lire" is the same loss as never having shown it.
+   */
   const notify = useCallback((kind: ToastMsg['kind'], text: string) => {
     const id = ++toastId.current;
     setToasts(t => [...t, { id, kind, text }]);
-    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 4600);
+    if (kind === 'ok') setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 4600);
   }, [setToasts]);
+
+  const dismissToast = useCallback((id: number) => setToasts(t => t.filter(x => x.id !== id)), []);
+  // Clearing all keeps a confirmation still fading on its own timer: it is not
+  // what the button is for, and removing it would fight a timeout for nothing.
+  const dismissAllToasts = useCallback(() => setToasts(t => t.filter(x => x.kind === 'ok')), []);
 
   // On load: drop ephemeral demo books (their in-memory text is gone) and reset
   // any stale busy states left over from a previous session (never resumes ingest).
@@ -54,76 +79,15 @@ export default function App() {
     setBooks(prev => {
       const cleaned = prev
         .filter(b => !b.id.startsWith('sample_'))
-        .map(b => (['extracting', 'chaptering', 'vectorizing'].includes(b.ingest)
-          ? { ...b, ingest: (b.archived ? 'archived' : 'idle') as Book['ingest'] } : b));
+        // Annotated rather than asserted: the return type is what narrows
+        // 'archived' | 'idle' to IngestState, where a cast would only have hidden
+        // the widening to string.
+        .map((b): Book => (['extracting', 'chaptering', 'vectorizing'].includes(b.ingest)
+          ? { ...b, ingest: b.archived ? 'archived' : 'idle' } : b));
       return cleaned.length === prev.length && cleaned.every((b, i) => b === prev[i]) ? prev : cleaned;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // ── App sandbox vault (doc 58) ─────────────────────────────────────────────
-  // Ensure the walled-off `APP-MNEMO-READER` vault at boot, then declare its
-  // Vault Pad tile. The vault starts isolated (no federated RAG / neural map /
-  // Dream State) until the human unlocks permanence from the host — so giving
-  // Mnemosyne "the memory of the books" is the human's gated choice.
-  useEffect(() => {
-    if (!isFramed()) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const sb = await bridge.ensureSandbox();
-        if (cancelled || !sb?.vault) return;
-        setSandboxVault(sb.vault);
-        await bridge.describeVaultTile({
-          icon: '📚',
-          metrics: [
-            { label: 'Livres', spine: 'SOCIAL_CONTACT' },
-            { label: 'Notes', spine: 'SOCIAL_NODE' },
-          ],
-        });
-      } catch (err) {
-        console.warn('[MnemoReader] sandbox vault ensure failed', err);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
-
-  // Catalogue sync — one SOCIAL_CONTACT chronicle per book so the tile shows an
-  // exact book count. Idempotent: a per-vault localStorage hash map skips books
-  // whose catalogue line is unchanged (the host also dedups by SHA-256).
-  useEffect(() => {
-    if (!sandboxVault?.startsWith('APP-') || books.length === 0) return;
-    let cancelled = false;
-    (async () => {
-      const key = `mnemoreader_synced_v1:${sandboxVault}`;
-      let synced: Record<string, string> = {};
-      try { synced = JSON.parse(localStorage.getItem(key) || '{}'); } catch { synced = {}; }
-      let pushed = 0;
-      for (const b of books) {
-        if (b.id.startsWith('sample_')) continue; // ephemeral demo book
-        const parts = [`Book: ${b.title}.`];
-        if (b.author) parts.push(`Author: ${b.author}.`);
-        parts.push(`Format: ${b.ext.toUpperCase()}, ${b.chapters.length} chapters, ${b.sentenceCount} sentences.`);
-        const content = parts.join(' ');
-        const h = hashString(content);
-        if (synced[b.id] === h) continue;
-        try {
-          await bridge.socialIngest(sandboxVault, content, 'SOCIAL_CONTACT');
-          if (cancelled) return;
-          synced[b.id] = h;
-          pushed++;
-        } catch (err) {
-          console.warn(`[MnemoReader] catalogue sync failed for "${b.title}"`, err);
-        }
-      }
-      if (pushed > 0 && !cancelled) {
-        localStorage.setItem(key, JSON.stringify(synced));
-        console.log(`[MnemoReader] ${pushed} book(s) catalogued into ${sandboxVault}`);
-      }
-    })();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sandboxVault, books]);
 
   /** Load the built-in demo text so the reader + voice can be tried without the host. */
   const loadSample = useCallback(() => {
@@ -150,13 +114,25 @@ export default function App() {
    * Reports each phase via `onPhase` (drives the URL-import overlay) and returns a
    * result so callers can react — while always setting the card state + toast itself.
    */
+  /** Drop a book's live counter — the read is over, one way or the other. */
+  const clearOcr = useCallback((id: string) => {
+    setOcrByBook(m => {
+      if (!(id in m)) return m;
+      const next = { ...m }; delete next[id]; return next;
+    });
+  }, []);
+
   const processInto = useCallback(async (
-    id: string, filePath: string, title: string, onPhase?: (p: ImportJob['phase']) => void, forceOcr = false,
+    id: string, filePath: string, title: string, onPhase?: PhaseReporter, forceOcr = false,
   ): Promise<{ ok: boolean; error?: string }> => {
     patchBook(id, { ingest: 'extracting', ingestError: undefined });
     onPhase?.('extracting');
     try {
-      const res = await bridge.extractDocument(filePath, forceOcr);
+      const res = await bridge.extractDocument(filePath, forceOcr, (ocr) => {
+        setOcrByBook(m => ({ ...m, [id]: ocr }));
+        onPhase?.('extracting', ocr);
+      });
+      clearOcr(id);
       if (!res?.success || !res.data) throw new Error(res?.error || 'Extraction failed (host returned no data)');
       const text = res.data.text;
       if (!text.trim()) throw new Error('No readable text found — this looks like a scanned/image PDF the host could not OCR.');
@@ -186,29 +162,30 @@ export default function App() {
         catch (err) { console.warn('[MnemoReader] ingest chunk failed', err); }
       }
       patchBook(id, { ingest: 'archived', archived: archived > 0 });
-      notify('ok', `“${title}” — ${chapters.length} chapters ready. Tap to read.`);
+      notify('ok', t('toast.importedOne', { title, n: chapters.length }));
       return { ok: true };
     } catch (err) {
       let msg = err instanceof Error ? err.message : String(err);
       // A missing source file deserves a human explanation, not a raw errno.
-      if (/ENOENT/i.test(msg)) msg = `The source file is no longer at its import location (moved, renamed or deleted?): ${filePath}`;
+      clearOcr(id);
+      if (/ENOENT/i.test(msg)) msg = t('toast.sourceGone', { path: filePath });
       console.error('[MnemoReader] ingest failed for', filePath, '→', msg, err);
       patchBook(id, { ingest: 'error', ingestError: msg });
-      notify('err', `${title}: ${msg}`);
+      notify('err', t('toast.importFailed', { title, error: msg }));
       return { ok: false, error: msg };
     }
-  }, [notify, patchBook]);
+  }, [clearOcr, notify, patchBook, t]);
 
   /** Full ingest pipeline for one file on disk (creates the book row, then processes).
    *  Returns the book id + result, or null when the file is rejected before processing. */
   const ingestPath = useCallback(async (
-    filePath: string, onPhase?: (p: ImportJob['phase']) => void,
-  ): Promise<{ id: string; ok: boolean; error?: string } | null> => {
+    filePath: string, onPhase?: PhaseReporter,
+  ): Promise<{ id: string; title: string; ok: boolean; error?: string } | null> => {
     const ext = extOf(filePath);
-    if (!SUPPORTED.includes(ext)) { notify('err', `Unsupported file type: .${ext}`); return null; }
-    if (!isFramed()) { notify('err', 'Run MnemoReader inside Mnemosyne OS to import books.'); return null; }
+    if (!SUPPORTED.includes(ext)) { notify('err', t('toast.unsupported', { ext })); return null; }
+    if (!isFramed()) { notify('err', t('toast.needHostImport')); return null; }
     const dup = books.find(b => b.filePath === filePath);
-    if (dup) { notify('info', 'That book is already in your library.'); return { id: dup.id, ok: true }; }
+    if (dup) { notify('info', t('toast.duplicate')); return { id: dup.id, title: dup.title, ok: true }; }
 
     const meta = guessMeta(basename(filePath));
     const id = newId();
@@ -220,8 +197,8 @@ export default function App() {
     };
     setBooks(prev => [book, ...prev]);
     const r = await processInto(id, filePath, meta.title, onPhase);
-    return { id, ok: r.ok, error: r.error };
-  }, [books, notify, processInto, setBooks]);
+    return { id, title: meta.title, ok: r.ok, error: r.error };
+  }, [books, notify, processInto, setBooks, t]);
 
   const addFile = useCallback(async () => {
     try {
@@ -235,59 +212,71 @@ export default function App() {
       const dir = await bridge.selectFolder();
       if (!dir) return;
       const res = await bridge.readDir(dir);
-      if (!res?.success || !res.files) { notify('err', res?.error || 'Could not read folder'); return; }
+      if (!res?.success || !res.files) { notify('err', res?.error || t('toast.folderUnreadable')); return; }
       const targets = res.files.filter(f => !f.isDirectory && SUPPORTED.includes(extOf(f.name)));
-      if (!targets.length) { notify('info', 'No supported documents in that folder.'); return; }
-      notify('info', `Importing ${targets.length} document${targets.length !== 1 ? 's' : ''}…`);
+      if (!targets.length) { notify('info', t('toast.folderEmpty')); return; }
+      notify('info', targets.length === 1 ? t('toast.importingOne') : t('toast.importingMany', { n: targets.length }));
       for (const f of targets) await ingestPath(f.path);
     } catch (err) { notify('err', err instanceof Error ? err.message : String(err)); }
-  }, [ingestPath, notify]);
+  }, [ingestPath, notify, t]);
 
   /** Download a document from a pasted link, then run the normal import pipeline —
    *  with a full ∞ overlay through every phase and a visible error state on failure. */
   const addUrl = useCallback(async (rawUrl: string) => {
     const url = rawUrl.trim();
-    if (!/^https?:\/\//i.test(url)) { notify('err', 'Paste a full http(s) link (e.g. https://…/book.pdf).'); return; }
-    if (!isFramed()) { notify('err', 'Run MnemoReader inside Mnemosyne OS to download books.'); return; }
+    if (!/^https?:\/\//i.test(url)) { notify('err', t('toast.badLink')); return; }
+    if (!isFramed()) { notify('err', t('toast.needHostDownload')); return; }
 
     const PHASE_LABEL: Record<ImportJob['phase'], string> = {
-      downloading: 'Downloading the file…',
-      extracting: 'Reading the document…',
-      vectorizing: 'Archiving into your library…',
-      error: 'Import failed',
+      downloading: t('import.downloading'),
+      extracting: t('import.extracting'),
+      vectorizing: t('import.vectorizing'),
+      error: t('import.failed'),
     };
+    backgrounded.current = false;
     setImportJob({ phase: 'downloading', label: PHASE_LABEL.downloading });
     try {
       const res = await bridge.downloadUrl(url);
-      if (!res?.success || !res.data?.path) throw new Error(res?.error || 'The link could not be downloaded.');
+      if (!res?.success || !res.data?.path) throw new Error(res?.error || t('toast.linkFailed'));
 
-      const out = await ingestPath(res.data.path, (p) => setImportJob({ phase: p, label: PHASE_LABEL[p] }));
+      const out = await ingestPath(res.data.path, (p, ocr) => setImportJob({
+        phase: p, label: PHASE_LABEL[p], detail: ocr ? ocrDetail(ocr, t) : undefined,
+      }));
       if (!out) { setImportJob(null); return; }             // rejected pre-processing (toast shown)
       if (!out.ok) { setImportJob({ phase: 'error', label: PHASE_LABEL.error, error: out.error }); return; }
 
       setImportJob(null);
-      setReader(out.id);                                     // auto-open so it's ready to listen
+      // Auto-open only if the user is still watching. Yanking someone out of
+      // whatever they went off to do is the opposite of "in the background".
+      if (backgrounded.current) notify('ok', t('toast.importedBackground', { title: out.title }));
+      else setReader(out.id);
     } catch (err) {
-      setImportJob({ phase: 'error', label: 'Download failed', error: err instanceof Error ? err.message : String(err) });
+      setImportJob({ phase: 'error', label: t('import.downloadFailed'), error: err instanceof Error ? err.message : String(err) });
     }
-  }, [ingestPath, notify]);
+  }, [ingestPath, notify, t]);
 
   /** Re-extract the current book with a proper OCR pass (ignores a poor embedded text
    *  layer), then remount the reader on the fresh text. Slow but high-quality. */
   const deepOcr = useCallback(async (book: Book) => {
-    if (!isFramed()) { notify('err', 'Run MnemoReader inside Mnemosyne OS to OCR.'); return; }
-    setImportJob({ phase: 'extracting', label: 'Deep OCR — analysing every page…' });
+    if (!isFramed()) { notify('err', t('toast.needHostOcr')); return; }
+    backgrounded.current = false;
+    setImportJob({ phase: 'extracting', label: t('import.deepOcr') });
     const r = await processInto(book.id, book.filePath, book.title,
-      (p) => setImportJob({ phase: p, label: p === 'extracting' ? 'Deep OCR — analysing every page…' : 'Archiving into your library…' }),
+      (p, ocr) => setImportJob({
+        phase: p,
+        label: p === 'extracting' ? t('import.deepOcr') : t('import.vectorizing'),
+        detail: ocr ? ocrDetail(ocr, t) : undefined,
+      }),
       true);
-    if (!r.ok) { setImportJob({ phase: 'error', label: 'Deep OCR failed', error: r.error }); return; }
+    if (!r.ok) { setImportJob({ phase: 'error', label: t('import.deepOcrFailed'), error: r.error }); return; }
     setImportJob(null);
+    if (backgrounded.current) notify('ok', t('toast.importedBackground', { title: book.title }));
     setReloadNonce(n => n + 1); // remount the reader with the re-OCR'd text
-  }, [notify, processInto]);
+  }, [notify, processInto, t]);
 
   const openBook = useCallback(async (book: Book) => {
     // A failed book: tapping it retries the import rather than dead-ending.
-    if (book.ingest === 'error') { notify('info', `Retrying “${book.title}”…`); await processInto(book.id, book.filePath, book.title); return; }
+    if (book.ingest === 'error') { notify('info', t('toast.retrying', { title: book.title })); await processInto(book.id, book.filePath, book.title); return; }
     if (loadedCache.current.has(book.id)) { setReader(book.id); return; }
 
     // Durable cache first: a cached book opens instantly and stays readable even
@@ -305,8 +294,8 @@ export default function App() {
 
     // No cache (imported before the durable cache existed) → extract from the
     // source file, and backfill the cache so this book is durable from now on.
-    if (!isFramed()) { notify('err', 'Open MnemoReader inside Mnemosyne OS to read this book.'); return; }
-    notify('info', `Opening “${book.title}”…`);
+    if (!isFramed()) { notify('err', t('toast.needHostOpen')); return; }
+    notify('info', t('toast.opening', { title: book.title }));
     try {
       const res = await bridge.extractDocument(book.filePath);
       if (!res?.success || !res.data) throw new Error(res?.error || 'Extraction failed');
@@ -323,10 +312,10 @@ export default function App() {
     } catch (err) {
       const raw = err instanceof Error ? err.message : String(err);
       notify('err', /ENOENT/i.test(raw)
-        ? `The source file is no longer at its import location (moved, renamed or deleted?). Re-add the book from where it lives now: ${book.filePath}`
-        : `Could not open: ${raw}`);
+        ? t('toast.fileMoved', { title: book.title })
+        : t('toast.openFailed', { title: book.title, error: raw }));
     }
-  }, [notify, patchBook, processInto]);
+  }, [notify, patchBook, processInto, t]);
 
   // Right-click asks for confirmation (the sandboxed iframe blocks window.confirm(),
   // so a dedicated modal states exactly what gets deleted and what stays).
@@ -338,8 +327,8 @@ export default function App() {
     void deleteText(book.id);                      // erase the durable local copy
     setBooks(prev => prev.filter(b => b.id !== book.id));
     if (reader === book.id) setReader(null);
-    notify('info', `Removed “${book.title}”. Your archived memory is untouched.`);
-  }, [reader, setBooks, notify]);
+    notify('info', t('toast.removed', { title: book.title }));
+  }, [reader, setBooks, notify, t]);
 
   const activeBook = reader ? books.find(b => b.id === reader) : null;
   const activeLoaded = reader ? loadedCache.current.get(reader) : null;
@@ -365,14 +354,15 @@ export default function App() {
               <div className="brand-mark"><IconBook size={22} /></div>
               <div>
                 <div className="brand-name">Mnemo<b>Reader</b></div>
-                <div className="brand-sub">EPUB · PDF · DOCX & more · voice reading</div>
+                <div className="brand-sub">{t('app.tagline')}</div>
               </div>
             </div>
             <div className="topbar-spacer" />
-            {!isFramed() && <span className="brand-sub">standalone preview — open inside Mnemosyne OS for full features</span>}
+            {!isFramed() && <span className="brand-sub">{t('app.standalone')}</span>}
           </div>
           <Library
             books={books}
+            ocr={ocrByBook}
             onOpen={openBook}
             onDelete={requestDelete}
             onAddFile={addFile}
@@ -383,9 +373,15 @@ export default function App() {
           />
         </>
       )}
-      {importJob && <ImportOverlay job={importJob} onClose={() => setImportJob(null)} />}
+      {importJob && (
+        <ImportOverlay
+          job={importJob}
+          onClose={() => setImportJob(null)}
+          onBackground={() => { backgrounded.current = true; setImportJob(null); }}
+        />
+      )}
       {confirmDelete && <ConfirmDelete book={confirmDelete} onCancel={() => setConfirmDelete(null)} onConfirm={deleteBook} />}
-      <Toasts items={toasts} />
+      <Toasts items={toasts} onDismiss={dismissToast} onDismissAll={dismissAllToasts} />
     </div>
   );
 }

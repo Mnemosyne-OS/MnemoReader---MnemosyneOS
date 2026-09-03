@@ -6,6 +6,7 @@
  * caller should fall back to browser-only features (Web Speech, file input).
  */
 import { MnemoCartridgeSDK } from '../sdk/mnemo-sdk';
+import type { LocalEngineInfo, VoiceEngineId } from './types';
 
 const PLUGIN_ID = '@mnemosyne-plugins/mnemo-reader';
 const sdk = new MnemoCartridgeSDK(PLUGIN_ID);
@@ -17,8 +18,11 @@ const NO_TIMEOUT = 0;
 const EXTRACT_TIMEOUT_MS = 25 * 60_000; // host deep-OCR ceiling is 20 min
 const DOWNLOAD_TIMEOUT_MS = 10 * 60_000; // up to 200 MB on a slow link
 const RENDER_TIMEOUT_MS = 90_000; // host render timeout is 60 s
-const TTS_WARM_TIMEOUT_MS = 180_000; // XTTS sidecar spawn + model load
-const TTS_SPEAK_TIMEOUT_MS = 60_000; // playback gives up sooner; this just settles the promise
+const TTS_WARM_TIMEOUT_MS = 180_000; // neural sidecar spawn + model load
+// 🪤 Must stay ABOVE the player's own per-unit budget (up to 120 s on a cloning
+// engine) — a shorter ceiling here would reject a healthy synthesis first, and
+// the player's carefully-sized timeout would never be the one that decides.
+const TTS_SPEAK_TIMEOUT_MS = 180_000;
 
 /** True when running inside the host shell (an iframe with a distinct parent). */
 export function isFramed(): boolean {
@@ -33,6 +37,26 @@ export interface ExtractedDocument {
 }
 export interface DirEntry { name: string; isDirectory: boolean; path: string }
 
+/**
+ * Where a document stands in the host's OCR. A union, not optional numbers:
+ * a queued document has no page count, and a 0 would read as an empty book.
+ */
+export type OcrProgress =
+  | { phase: 'queued'; ahead: number }
+  | { phase: 'reading'; page: number; of: number };
+
+type ExtractResult = { success: boolean; data?: ExtractedDocument; error?: string };
+
+/** The user's Settings → Voice choice, plus what the host has installed. */
+export interface VoiceConfig {
+  /** 'browser' (system voice) or a host local engine id. */
+  engine: VoiceEngineId;
+  voice: string;
+  speed: number;
+  /** Every AVAILABLE local engine, from the host registry. Absent on an old host. */
+  engines?: LocalEngineInfo[];
+}
+
 export const bridge = {
   /** Open the OS file picker for a supported document. Returns an absolute path or null. */
   selectFile: (extensions: string[]) =>
@@ -46,9 +70,34 @@ export const bridge = {
     sdk.invoke<{ success: boolean; files?: DirEntry[]; error?: string }>('dialog.readDir', { dirPath }),
 
   /** Extract plain text from a PDF/DOCX/text file on disk (host uses pdf-parse/mammoth).
-   *  `forceOcr` re-runs a proper OCR pass instead of trusting a poor embedded text layer. */
-  extractDocument: (filePath: string, forceOcr = false) =>
-    sdk.invoke<{ success: boolean; data?: ExtractedDocument; error?: string }>('reader.extractDocument', { filePath, forceOcr }, EXTRACT_TIMEOUT_MS),
+   *  `forceOcr` re-runs a proper OCR pass instead of trusting a poor embedded text layer.
+   *
+   *  Pass `onOcrPage` to follow a SCANNED document page by page: the host streams
+   *  its OCR progress and the same result arrives at the end. Two reasons to want
+   *  it on a book — an hour behind a spinner is indistinguishable from a hang, and
+   *  the stream's timeout is an INACTIVITY bound refreshed by every page, so a
+   *  long-but-healthy read can no longer be rejected by a fixed ceiling. */
+  extractDocument: (
+    filePath: string, forceOcr = false, onOcrPage?: (p: OcrProgress) => void,
+  ): Promise<ExtractResult> => {
+    const payload = { filePath, forceOcr };
+    if (!onOcrPage) return sdk.invoke<ExtractResult>('reader.extractDocument', payload, EXTRACT_TIMEOUT_MS);
+    return sdk.stream<ExtractResult>('reader.extractDocument', payload, {
+      timeoutMs: EXTRACT_TIMEOUT_MS,
+      onChunk: (text) => {
+        // A chunk that is not progress is not an error: an older host may stream
+        // nothing at all, and the extraction still completes normally.
+        try {
+          const p = JSON.parse(text) as Partial<{ phase: string; page: number; of: number; ahead: number }>;
+          if (p?.phase === 'reading' && typeof p.page === 'number' && typeof p.of === 'number' && p.of > 0) {
+            onOcrPage({ phase: 'reading', page: p.page, of: p.of });
+          } else if (p?.phase === 'queued' && typeof p.ahead === 'number') {
+            onOcrPage({ phase: 'queued', ahead: p.ahead });
+          }
+        } catch { /* not a progress frame */ }
+      },
+    }).then(r => r.data ?? { success: false, error: 'Extraction returned no result' });
+  },
 
   /** Download a remote document (PDF/EPUB/…) to a local file host-side. Returns its path. */
   downloadUrl: (url: string) =>
@@ -58,26 +107,27 @@ export const bridge = {
   renderPage: (filePath: string, page: number) =>
     sdk.invoke<{ success: boolean; data?: { image: string; pages: number; w: number; h: number }; error?: string }>('reader.renderPage', { filePath, page }, RENDER_TIMEOUT_MS),
 
-  /** The user's configured voice from the host Settings → Voice (engine/voice/speed). */
-  voiceConfig: () =>
-    sdk.invoke<{ engine: 'browser' | 'piper' | 'xtts'; voice: string; speed: number }>('reader.voiceConfig'),
+  /** The user's configured voice from the host Settings → Voice, and the engine catalogue. */
+  voiceConfig: () => sdk.invoke<VoiceConfig>('reader.voiceConfig'),
 
-  /** Whether a local neural voice engine (piper | xtts) is ready (installed + licensed). */
-  ttsStatus: (engine: 'piper' | 'xtts' = 'piper') =>
+  /** Whether a local neural voice engine is ready (installed + licensed). */
+  ttsStatus: (engine: VoiceEngineId) =>
     sdk.invoke<{ success: boolean; data?: { ready: boolean }; error?: string }>('reader.ttsStatus', { engine }),
 
-  /** Installed Piper voice ids. */
+  /** Installed Piper voice ids (Piper alone names downloaded voice FILES). */
   ttsVoices: () =>
     sdk.invoke<{ success: boolean; data?: { voices: string[] }; error?: string }>('reader.ttsVoices'),
 
   /** Preload a neural engine (sidecar spawn + model load) before first synthesis. */
-  ttsWarm: (engine: 'piper' | 'xtts' = 'piper') =>
+  ttsWarm: (engine: VoiceEngineId) =>
     sdk.invoke<{ success: boolean; error?: string }>('reader.ttsWarm', { engine }, TTS_WARM_TIMEOUT_MS),
 
-  /** Synthesize one chunk of text → raw PCM (base64) the renderer plays via Web Audio. */
-  ttsSpeak: (text: string, voice: string, speed: number, engine: 'piper' | 'xtts' = 'piper') =>
-    sdk.invoke<{ success: boolean; pcmBase64?: string; sampleRate?: number; error?: string }>(
-      'reader.ttsSpeak', { text, voice, speed, engine }, TTS_SPEAK_TIMEOUT_MS
+  /** Synthesize one unit of text → raw PCM (base64) the renderer plays via Web Audio.
+   *  The host owns the delivery (clause-safe cutting, lexicon, breath, trim/fade);
+   *  `next` is what we will read after this one, so it can tell an end from a seam. */
+  ttsSpeak: (text: string, voice: string, speed: number, engine: VoiceEngineId, next?: string) =>
+    sdk.invoke<{ success: boolean; pcmBase64?: string; sampleRate?: number; pieces?: number; error?: string }>(
+      'reader.ttsSpeak', { text, voice, speed, engine, next }, TTS_SPEAK_TIMEOUT_MS
     ),
 
   /** Host + vault status — used to detect whether the Library vault already exists. */

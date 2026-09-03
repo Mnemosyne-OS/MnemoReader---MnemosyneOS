@@ -21,6 +21,7 @@ Drop a book — **EPUB, PDF, DOCX, RTF, TXT, HTML, Markdown…** — or a whole 
 - 🧠 **Vectorizes + archives** it into a dedicated **Library vault** (SHA-256 dedup, auto-spines)
 - 🔖 **Auto-detects chapters** from headings, numbering, and structure
 - 🔊 **Reads it aloud** with **word-synced karaoke highlighting**, resume position, chapter jumping, variable speed, and a sleep timer
+- 🌍 **Speaks seven languages** (de, en, es, fr, pt, ru, zh), following the host, and it tells you when no installed voice speaks the book's own language rather than reading it in the wrong one
 
 <p align="center"><em>Dark reading-lamp UI · liquid-glass surfaces · fluid motion.</em></p>
 
@@ -40,20 +41,24 @@ MnemoReader (iframe)                 Mnemosyne OS host
 ────────────────────                 ─────────────────
 dialog.selectFile      ───▶  OS file picker
 reader.extractDocument ───▶  pdf-parse / mammoth  → plain text
-reader.ttsStatus/Voices───▶  local Piper neural engine (status/voices)
-reader.ttsSpeak        ───▶  Piper  → raw PCM (played via Web Audio)
+reader.ttsStatus/Voices───▶  the host's local voice engines (status/voices)
+reader.ttsSpeak        ───▶  the chosen engine → raw PCM (played via Web Audio)
 reader.ingest          ───▶  routePulse → vectorize + archive into LIBRARY vault
 ```
 
-### Two voice engines, one player
+### One player, whichever engine the host offers
 
 | Engine | Quality | Karaoke | Availability |
 |--------|---------|---------|--------------|
 | **System voice** (Web Speech) | good | **exact** (word-boundary events) | always, in-browser |
-| **Neural (Piper)** | excellent | time-interpolated | when installed + licensed in the host |
+| **A local neural engine** | excellent | time-interpolated | when installed + licensed in the host |
 
-The reader starts on the system voice and offers Piper when the host reports it
-ready. If the neural engine is unavailable mid-session, it falls back gracefully.
+MnemoReader names no engine of its own. It asks the host which local voices are
+installed and plays the one you chose in Mnemosyne OS settings, so an engine
+added to the OS works here without a line of code changing. The reader starts on
+the system voice, follows your host setting every time it opens, and when a
+neural engine stops answering mid-session it names the engine it fell back from
+instead of just saying a voice is unavailable.
 
 ## Try it standalone
 
@@ -84,18 +89,34 @@ src/
 ├── App.tsx                 # library ⇆ reader, ingest pipeline, toasts, resume
 ├── styles.css              # design system (glassmorphism, amber accent, motion)
 ├── sdk/mnemo-sdk.ts        # postMessage bridge to the host
+├── i18n/
+│   ├── useI18n.ts          # follows the host's language
+│   └── locales/            # de, en, es, fr, pt, ru, zh
+├── hooks/
+│   ├── useReaderVoice.ts   # engine selection, playback state, fallbacks
+│   ├── useSandboxCatalogue.ts
+│   └── useSleepTimer.ts
 ├── lib/
 │   ├── bridge.ts           # typed reader ⇄ host actions
-│   ├── voice.ts            # ReaderPlayer — browser + Piper backends, gapless
+│   ├── voice.ts            # the single import site for the three files below
+│   ├── voice/player.ts     # ReaderPlayer: backends and the gapless scheduler
+│   ├── voice/leadPolicy.ts # how much audio to hold when an engine is slower than speech
+│   ├── voice/browserVoices.ts
 │   ├── pdf.ts              # sentence split, chapter detection, ingest chunking
+│   ├── lang.ts             # does any installed voice speak this book?
+│   ├── textStore.ts        # extracted text cached in IndexedDB
 │   ├── vaults.ts           # provisions the Library vault
 │   └── types.ts
 └── components/
     ├── Library.tsx  BookCard.tsx      # cover grid, progress rings, ingest states
     ├── Reader.tsx   ChapterRail.tsx   # reading canvas + chapter navigation
     ├── AudioDock.tsx                  # transport, scrubber, speed/voice/sleep
+    ├── ImportOverlay.tsx  ConfirmDelete.tsx
     └── Icons.tsx    Toast.tsx
 ```
+
+Tests run with `pnpm test` (68 of them, on the sentence splitter, the language
+match, the lead policy and the seven locale files).
 
 ## License
 

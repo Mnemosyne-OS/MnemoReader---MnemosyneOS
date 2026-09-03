@@ -1,6 +1,6 @@
 {
   "name": "@mnemosyne-plugins/mnemo-reader",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "description": "MnemoReader — PDF library + voice reading cartridge for Mnemosyne OS",
@@ -9,7 +9,11 @@
     "dev": "vite",
     "dev:cartridge": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "eslint src --max-warnings 0",
+    "lint:fix": "eslint src --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@mnemosyne_os/cartridge-sdk": "workspace:*",
@@ -21,10 +25,15 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
     "typescript": "^5.5.3",
-    "vite": "^5.4.1"
+    "vite": "^5.4.1",
+    "eslint": "^9.0.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "typescript-eslint": "^8.58.2",
+    "vitest": "^1.6.1",
+    "jsdom": "^29.1.1"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/yaka0007/MnemoReader---MnemosyneOS.git"
+    "url": "https://github.com/Mnemosyne-OS/MnemoReader---MnemosyneOS"
   }
 }

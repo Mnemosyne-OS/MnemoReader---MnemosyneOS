@@ -1,4 +1,5 @@
 import type { Book } from '../lib/types';
+import { useI18n } from '../i18n/useI18n';
 
 /**
  * Deletion validation overlay — replaces the old instant right-click removal.
@@ -16,21 +17,19 @@ export function ConfirmDelete({ book, onCancel, onConfirm }: {
   onCancel: () => void;
   onConfirm: (book: Book) => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="import-overlay" onClick={onCancel}>
       <div className="import-card" onClick={(e) => e.stopPropagation()}>
-        <div className="import-title">Remove “{book.title}”?</div>
+        <div className="import-title">{t('confirm.title', { title: book.title })}</div>
         <div className="import-msg" style={{ textAlign: 'left' }}>
-          <p style={{ margin: '0 0 8px' }}>• Removes the book and its local reading copy from MnemoReader.</p>
-          <p style={{ margin: '0 0 8px' }}>• The original file on disk is <strong>never</strong> touched.</p>
-          <p style={{ margin: 0 }}>
-            • What you archived into your Mnemosyne vault <strong>stays in your memory</strong> — you govern
-            it from Mnemosyne OS (Governance / Neural Map), not from this app.
-          </p>
+          <p style={{ margin: '0 0 8px' }}>{t('confirm.line1')}</p>
+          <p style={{ margin: '0 0 8px' }}>{t('confirm.line2')}</p>
+          <p style={{ margin: 0 }}>{t('confirm.line3')}</p>
         </div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
-          <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
-          <button className="btn btn-primary" onClick={() => onConfirm(book)}>Remove book</button>
+          <button className="btn btn-ghost" onClick={onCancel}>{t('confirm.cancel')}</button>
+          <button className="btn btn-primary" onClick={() => onConfirm(book)}>{t('confirm.remove')}</button>
         </div>
       </div>
     </div>

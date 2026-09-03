@@ -16,5 +16,7 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "//": "Tests are typechecked by vitest itself; the app build must not depend on the test runner being installed.",
+  "exclude": ["src/**/*.test.ts"]
 }

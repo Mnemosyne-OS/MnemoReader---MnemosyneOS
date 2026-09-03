@@ -22,14 +22,14 @@ function mergeShortUnits(sentences: string[], offsets: number[]): { sentences: s
   const outS: string[] = [];
   const outO: number[] = [];
   for (let i = 0; i < sentences.length; i++) {
-    const s = sentences[i]!;
+    const s = sentences[i];
     const last = outS.length - 1;
-    const prevLen = last >= 0 ? outS[last]!.length : 0;
+    const prevLen = last >= 0 ? outS[last].length : 0;
     if (last >= 0 && prevLen < TARGET_UNIT_CHARS && prevLen + s.length + 1 <= MAX_UNIT_CHARS) {
       outS[last] = `${outS[last]} ${s}`; // keep filling the current unit (offset unchanged)
     } else {
       outS.push(s);
-      outO.push(offsets[i]!);
+      outO.push(offsets[i]);
     }
   }
   return { sentences: outS, offsets: outO };

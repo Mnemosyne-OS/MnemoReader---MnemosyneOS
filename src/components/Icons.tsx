@@ -41,6 +41,28 @@ export const IconMoon = ({ size = 24, className }: P) => (
 export const IconGauge = ({ size = 24, className }: P) => (
   <svg {...base(size)} className={className}><path d="M12 13l4-3" /><path d="M4 15a8 8 0 1 1 16 0" /><circle cx="12" cy="13" r="1.4" fill="currentColor" stroke="none" /></svg>
 );
+/**
+ * The ∞, traced by a light that runs around it — Mnemosyne's own "working" sign.
+ *
+ * One definition for both places it appears (the cold-start overlay and the play
+ * button), because two copies of a loader drift into two different animations.
+ * Colour comes from the CSS: amber on a dark card, `currentColor` on the amber
+ * fab, where an amber stroke would be invisible.
+ */
+export const IconInfinityTrace = ({ size = 24, className }: P) => {
+  const d = 'M12 12c-2-2.67-4-4-6-4a4 4 0 1 0 0 8c2 0 4-1.33 6-4Zm0 0c2 2.67 4 4 6 4a4 4 0 0 0 0-8c-2 0-4 1.33-6 4Z';
+  return (
+    <svg {...base(size)} className={`inf-loader ${className ?? ''}`} aria-hidden="true">
+      <path className="inf-bg" d={d} />
+      <path className="inf-trace" pathLength={100} d={d} />
+    </svg>
+  );
+};
+
+/** A voice: the waveform, not a mouth — this picks who SPEAKS, not who listens. */
+export const IconWaveform = ({ size = 24, className }: P) => (
+  <svg {...base(size)} className={className}><path d="M4 11v2M8 8v8M12 5v14M16 8v8M20 11v2" /></svg>
+);
 export const IconX = ({ size = 24, className }: P) => (
   <svg {...base(size)} className={className}><path d="M6 6l12 12M18 6L6 18" /></svg>
 );

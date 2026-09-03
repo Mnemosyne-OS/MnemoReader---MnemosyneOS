@@ -1,7 +1,7 @@
 {
   "name": "@mnemosyne-plugins/mnemo-reader",
   "displayName": "MnemoReader",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "category": "Research",
   "icon": "icon.svg",
   "vendor": "Mnemosyne Labs",
@@ -39,6 +39,7 @@
   "widgets": [
     {
       "id": "mnemo-reader-main",
+      "icon": "📚",
       "name": "MnemoReader",
       "route": "index.html",
       "defaultWidth": 1180,

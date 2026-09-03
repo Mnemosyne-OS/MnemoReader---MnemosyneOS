@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Book, LoadedBook, ReaderSettings } from '../lib/types';
-import { ReaderPlayer, warmBrowserVoices, type PlayerState, type BrowserVoiceInfo } from '../lib/voice';
-import { detectLang, pickVoiceForLang } from '../lib/lang';
+import { isNeuralEngine, type Book, type LoadedBook, type ReaderSettings } from '../lib/types';
+import { ReaderPlayer, type PlayerState, type PrepareProgress } from '../lib/voice';
+import { useReaderVoice } from '../hooks/useReaderVoice';
+import { useSleepTimer } from '../hooks/useSleepTimer';
+import { useI18n } from '../i18n/useI18n';
 import { bridge, isFramed } from '../lib/bridge';
 import { ChapterRail } from './ChapterRail';
 import { AudioDock } from './AudioDock';
 import { PdfCompare } from './PdfCompare';
-import { IconChevron, IconColumns, IconSparkle } from './Icons';
+import { IconChevron, IconColumns, IconSparkle, IconInfinityTrace } from './Icons';
 
 interface ReaderProps {
   book: Book;
@@ -20,6 +22,7 @@ interface ReaderProps {
 }
 
 export function Reader({ book, loaded, settings, onChange, onProgress, onBack, onDeepOcr, notify }: ReaderProps) {
+  const { t } = useI18n();
   const { sentences } = loaded;
   const count = sentences.length;
 
@@ -29,29 +32,54 @@ export function Reader({ book, loaded, settings, onChange, onProgress, onBack, o
   // True once audio has actually played — gates the full-screen warm-up overlay
   // so it only shows on the initial cold start, never between sentences.
   const [everPlayed, setEverPlayed] = useState(false);
-  const [browserVoices, setBrowserVoices] = useState<BrowserVoiceInfo[]>([]);
-  const [piper, setPiper] = useState<{ ready: boolean; voices: string[] }>({ ready: false, voices: [] });
-  const [sleepRemaining, setSleepRemaining] = useState<number | null>(null);
-  // User-picked voice in the dock (overrides the language-matched one for this session).
-  const [manualVoice, setManualVoice] = useState<string | null>(null);
+  // A chapter being synthesized ahead of playback (null = not running).
+  const [prepare, setPrepare] = useState<PrepareProgress | null>(null);
+  // A lead being built before/during playback: seconds ready out of seconds wanted.
+  const [lead, setLead] = useState<{ ready: number; target: number } | null>(null);
   // Side-by-side original-PDF compare pane (to eyeball OCR quality vs the source).
   const [compare, setCompare] = useState(false);
   const canCompare = isFramed() && book.ext === 'pdf' && !!book.filePath;
 
   const playerRef = useRef<ReaderPlayer | null>(null);
   const sentenceElRef = useRef<HTMLSpanElement | null>(null);
+  /** Units the engine could not speak in this reading — counted, never silent. */
+  const skipped = useRef(0);
+  /** The "this engine cannot keep up" nudge is said once, or it becomes noise. */
+  const nudged = useRef(false);
 
-  // Latest callbacks/settings for the player hooks (avoids stale closures without re-creating the player).
-  const live = useRef({ onProgress, onChange, notify, engine: settings.engine });
-  live.current = { onProgress, onChange, notify, engine: settings.engine };
+  // Who reads the book, and how that choice is allowed to change (hooks/useReaderVoice).
+  const voice = useReaderVoice({ settings, text: loaded.text, onChange, notify });
+  const { activeEngine, engineLabel, effectiveVoice } = voice;
+  // 🪤 The player's hooks are built ONCE, so they must reach the current voice
+  // object rather than the one captured at mount — the same reason `live` exists.
+  const voiceRef = useRef(voice);
+  voiceRef.current = voice;
 
-  // Speak the document in its own language: detect it, then pick a matching voice
-  // for the active engine. A manual pick in the dock wins; else fall back to seeded.
-  const bookLang = useMemo(() => detectLang(loaded.text), [loaded.text]);
-  const effectiveVoice = useMemo(
-    () => manualVoice ?? pickVoiceForLang(settings.engine, bookLang, { browser: browserVoices, piper: piper.voices }) ?? settings.voice,
-    [manualVoice, settings.engine, settings.voice, bookLang, browserVoices, piper.voices],
-  );
+  // Latest callbacks/settings for the player hooks (avoids stale closures without
+  // re-creating the player). Assigned below, once the engine's label is known.
+  const live = useRef({ onProgress, onChange, notify, engine: settings.engine, engineLabel: '' });
+
+  live.current = { onProgress, onChange, notify, engine: activeEngine, engineLabel };
+
+  /**
+   * Once the engine's real speed is known, say so if it cannot keep up.
+   *
+   * 🚨 Measured, never assumed: above 1× the synthesis falls behind speech
+   * cumulatively, so the lead is spent and never rebuilt while playing. The
+   * player then stops on purpose now and then to rebuild one, instead of
+   * breaking after every sentence — but a pause nobody explained is still a
+   * reader that looks broken, so it is named once, with the number, next to the
+   * one thing that removes it.
+   */
+  const nudgeIfBehind = () => {
+    if (nudged.current) return;
+    const p = playerRef.current;
+    const f = p?.realtimeFactor();
+    if (!p || f === null || f === undefined || f <= 1.15 || p.isPreparing) return;
+    nudged.current = true;
+    live.current.notify('info',
+      t('toast.engineSlow', { name: live.current.engineLabel, factor: f.toFixed(1) }));
+  };
 
   // ── chapter math ──────────────────────────────────────────────────────────
   const chapterOf = useMemo(() => {
@@ -75,43 +103,39 @@ export function Reader({ book, loaded, settings, onChange, onProgress, onBack, o
 
   // ── create the player once (Reader is keyed by book id in App) ──────────────
   useEffect(() => {
-    warmBrowserVoices().then(setBrowserVoices);
-
-    // Reuse the voice already configured in the host (Settings → Voice), unless the
-    // user has explicitly chosen one inside MnemoReader (engine changed or voice set).
-    bridge.voiceConfig().then((vc) => {
-      // Follow the engine selected in the host (Settings → Voice) on every open,
-      // UNLESS the user picked a voice inside MnemoReader. The voice itself is chosen
-      // by the document's language (effectiveVoice). Adopt the host speed only on a
-      // fresh reader (rate still default) so a dock speed change sticks.
-      if (vc && !settings.voiceOverridden) {
-        const patch: Partial<ReaderSettings> = { engine: vc.engine };
-        if (settings.rate === 1) patch.rate = Math.max(0.5, Math.min(2, vc.speed || 1));
-        live.current.onChange(patch);
-      }
-    }).catch(() => { /* keep defaults */ });
-
-    bridge.ttsStatus().then(async (st) => {
-      const ready = !!st?.success && !!st.data?.ready;
-      let voices: string[] = [];
-      if (ready) {
-        const vr = await bridge.ttsVoices().catch(() => null);
-        voices = vr?.success ? (vr.data?.voices ?? []) : [];
-      }
-      setPiper({ ready, voices });
-      // (Neural-not-installed is handled by the player's onError fallback — no
-      // auto-switch here, which used to race the host-engine sync above.)
-    }).catch(() => setPiper({ ready: false, voices: [] }));
-
     const p = new ReaderPlayer(settings.engine, settings.voice, settings.rate, {
-      onSentence: (i) => { setActiveSentence(i); setActiveWord(null); live.current.onProgress(i); },
+      onSentence: (i) => {
+        setActiveSentence(i); setActiveWord(null); live.current.onProgress(i);
+        nudgeIfBehind();
+      },
       onWord: (_, s, e) => setActiveWord({ start: s, end: e }),
-      onState: (s) => { setPlayerState(s); if (s === 'playing') setEverPlayed(true); },
-      onEnd: () => { setActiveWord(null); live.current.notify('ok', 'Finished — the whole book was read.'); },
+      onState: (s) => { setPlayerState(s); if (s === 'playing') { setEverPlayed(true); setLead(null); } },
+      onLead: (ready, target) => setLead({ ready, target }),
+      // A unit the engine could not speak is words the listener never hears —
+      // said once, with the sentence number, and counted for the end.
+      onSkipped: (index, reason) => {
+        skipped.current += 1;
+        if (skipped.current === 1) {
+          live.current.notify('err', t('toast.sentenceSkipped', { n: index + 1, reason }));
+        }
+      },
+      onEnd: () => {
+        setActiveWord(null);
+        const missed = skipped.current;
+        live.current.notify(missed ? 'err' : 'ok',
+          missed === 0 ? t('toast.finished')
+            : missed === 1 ? t('toast.finishedWithGapsOne')
+              : t('toast.finishedWithGapsMany', { n: missed }));
+      },
       onError: (msg) => {
-        if (live.current.engine !== 'browser') {
-          live.current.notify('info', 'Neural voice unavailable — switching to the system voice.');
-          live.current.onChange({ engine: 'browser' });
+        if (isNeuralEngine(live.current.engine)) {
+          // Name the engine AND the reason: a fallback that says "unavailable"
+          // and nothing else is indistinguishable from the app ignoring the
+          // user's choice, which is precisely what it used to be mistaken for.
+          live.current.notify('info', t('toast.engineFailed', { name: live.current.engineLabel, error: msg }));
+          // A fallback is for THIS session — it must not rewrite what the user
+          // chose in Settings, or a passing failure would outlive its cause.
+          voiceRef.current.fallBackToSystem();
         } else {
           live.current.notify('err', msg);
         }
@@ -127,30 +151,21 @@ export function Reader({ book, loaded, settings, onChange, onProgress, onBack, o
   // Apply rate changes.
   useEffect(() => { playerRef.current?.setRate(settings.rate); }, [settings.rate]);
   // Apply engine / (language-matched) voice changes.
-  useEffect(() => { playerRef.current?.setVoice(settings.engine, effectiveVoice); }, [settings.engine, effectiveVoice]);
-  // Warm a neural engine ahead of first play (XTTS cold start ~30s) so the loading
-  // state has something to show and playback starts sooner.
   useEffect(() => {
-    if (settings.engine === 'piper' || settings.engine === 'xtts') bridge.ttsWarm(settings.engine).catch(() => { /* best-effort */ });
-  }, [settings.engine]);
+    playerRef.current?.setVoice(activeEngine, effectiveVoice);
+  }, [activeEngine, effectiveVoice]);
+  // Warm the neural engine ahead of first play (a cold sidecar is ~30s) so the
+  // loading state has something to show and playback starts sooner.
+  useEffect(() => {
+    if (isNeuralEngine(activeEngine)) bridge.ttsWarm(activeEngine).catch(() => { /* best-effort */ });
+  }, [activeEngine]);
 
-  // Sleep timer: arm a one-shot pause + a display countdown.
-  useEffect(() => {
-    if (settings.sleepMinutes <= 0) { setSleepRemaining(null); return; }
-    const deadline = Date.now() + settings.sleepMinutes * 60_000;
-    setSleepRemaining(settings.sleepMinutes);
-    const tick = setInterval(() => {
-      const left = Math.max(0, Math.ceil((deadline - Date.now()) / 60_000));
-      setSleepRemaining(left);
-      if (Date.now() >= deadline) {
-        playerRef.current?.pause();
-        notify('info', 'Sleep timer — playback paused. Good night.');
-        onChange({ sleepMinutes: 0 });
-      }
-    }, 5_000);
-    return () => clearInterval(tick);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings.sleepMinutes]);
+  // Sleep timer — the reader owns what expiring MEANS, the hook owns the clock.
+  const sleepRemaining = useSleepTimer(settings.sleepMinutes, () => {
+    playerRef.current?.pause();
+    notify('info', t('toast.sleepPaused'));
+    onChange({ sleepMinutes: 0 });
+  });
 
   // Auto-scroll the active sentence into view.
   useEffect(() => {
@@ -171,10 +186,29 @@ export function Reader({ book, loaded, settings, onChange, onProgress, onBack, o
   };
 
   // A voice pick in the dock becomes the manual override (wins over language match).
-  const dockChange = (patch: Partial<ReaderSettings>) => {
-    const picksVoice = patch.engine !== undefined || patch.voice !== undefined;
-    if (patch.voice !== undefined) setManualVoice(patch.voice);
-    onChange(picksVoice ? { ...patch, voiceOverridden: true } : patch);
+
+  /**
+   * Synthesize the rest of the chapter before it is needed.
+   *
+   * 🚨 The only real answer to an engine slower than speech: at a factor f, an
+   * hour of hole-free reading needs (f − 1) hours of head start, and no rolling
+   * buffer recovers a deficit that accumulates. Paid once, visibly, instead of
+   * being spent as a hole after every sentence. Playback can start whenever —
+   * the scheduler reads the same cache.
+   */
+  const togglePrepare = () => {
+    const p = playerRef.current;
+    if (!p) return;
+    if (p.isPreparing) { p.stopPreparing(); return; }
+    const to = chapterEndSentence;
+    setPrepare({ done: 0, total: Math.max(1, to - activeSentence), secondsReady: 0 });
+    void p.prepare(activeSentence, to, setPrepare).then((outcome) => {
+      const ready = Math.round(p.preparedSeconds(activeSentence) / 60);
+      setPrepare(null);
+      if (outcome === 'done') notify('ok', t('toast.chapterReady', { minutes: ready }));
+      else if (outcome === 'full') notify('info', t('toast.chapterPartly', { minutes: ready }));
+      else if (outcome === 'failed') notify('err', t('toast.prepareFailed', { name: engineLabel }));
+    });
   };
 
   // ── prose (only the current chapter is materialized, for performance) ────────
@@ -217,35 +251,32 @@ export function Reader({ book, loaded, settings, onChange, onProgress, onBack, o
         {playerState === 'buffering' && !everPlayed && (
           <div className="voice-loading">
             <div className="voice-loading-card">
-              <svg className="inf-loader" viewBox="0 0 24 24" width="60" height="34" aria-hidden="true">
-                <path className="inf-bg" d="M12 12c-2-2.67-4-4-6-4a4 4 0 1 0 0 8c2 0 4-1.33 6-4Zm0 0c2 2.67 4 4 6 4a4 4 0 0 0 0-8c-2 0-4 1.33-6 4Z" />
-                <path className="inf-trace" pathLength={100} d="M12 12c-2-2.67-4-4-6-4a4 4 0 1 0 0 8c2 0 4-1.33 6-4Zm0 0c2 2.67 4 4 6 4a4 4 0 0 0 0-8c-2 0-4 1.33-6 4Z" />
-              </svg>
-              <span>Preparing the voice…</span>
+              <IconInfinityTrace size={56} />
+              <span>{t('reader.preparingVoice')}</span>
             </div>
           </div>
         )}
         <div className="topbar" style={{ borderBottom: '1px solid var(--stroke-soft)' }}>
-          <button className="btn btn-ghost" onClick={onBack} style={{ transform: 'scaleX(-1)' }} title="Back to library">
+          <button className="btn btn-ghost" onClick={onBack} style={{ transform: 'scaleX(-1)' }} title={t('reader.back')}>
             <IconChevron size={18} />
           </button>
           <div style={{ minWidth: 0 }}>
             <div className="dock-now-ch" style={{ fontSize: 14 }}>{chapter?.title || book.title}</div>
-            <div className="brand-sub">Chapter {activeChapter + 1} of {book.chapters.length}</div>
+            <div className="brand-sub">{t('reader.chapterOf', { n: activeChapter + 1, total: book.chapters.length })}</div>
           </div>
           <div className="topbar-spacer" />
           {canCompare && (
-            <button className={`chip ${compare ? 'on' : ''}`} onClick={() => setCompare(v => !v)} title="Compare with the original PDF">
+            <button className={`chip ${compare ? 'on' : ''}`} onClick={() => setCompare(v => !v)} title={t('reader.comparePdf')}>
               <IconColumns size={15} /> PDF
             </button>
           )}
           {canCompare && (
-            <button className="chip" onClick={onDeepOcr} title="Re-OCR every page properly (slow, higher quality than an embedded text layer)">
-              <IconSparkle size={15} /> Deep OCR
+            <button className="chip" onClick={onDeepOcr} title={t('reader.deepOcrTitle')}>
+              <IconSparkle size={15} /> {t('reader.deepOcr')}
             </button>
           )}
-          <button className="chip" onClick={() => onChange({ fontSize: Math.max(15, settings.fontSize - 2) })}>A−</button>
-          <button className="chip" onClick={() => onChange({ fontSize: Math.min(30, settings.fontSize + 2) })}>A+</button>
+          <button className="chip" onClick={() => onChange({ fontSize: Math.max(15, settings.fontSize - 2) })}>{t('reader.smaller')}</button>
+          <button className="chip" onClick={() => onChange({ fontSize: Math.min(30, settings.fontSize + 2) })}>{t('reader.larger')}</button>
           <button className="chip" onClick={() => {
             const order: ReaderSettings['theme'][] = ['night', 'sepia', 'paper'];
             onChange({ theme: order[(order.indexOf(settings.theme) + 1) % order.length] });
@@ -270,13 +301,34 @@ export function Reader({ book, loaded, settings, onChange, onProgress, onBack, o
         pct={count > 1 ? activeSentence / (count - 1) : 0}
         ticks={ticks}
         settings={settings}
+        engineLabel={engineLabel}
+        lead={lead}
+        voice={{
+          engines: voice.engineChoices,
+          activeEngine,
+          speedRange: voice.engineInfo?.speedRange ?? null,
+          following: voice.following,
+          options: voice.voiceOptions,
+          activeVoice: effectiveVoice,
+          onOpen: voice.probeEngines,
+          onPickEngine: voice.pickEngine,
+          onPickVoice: voice.pickVoice,
+        }}
+        prepare={{
+          supported: isNeuralEngine(activeEngine),
+          running: prepare !== null,
+          done: prepare?.done ?? 0,
+          total: prepare?.total ?? 0,
+          secondsReady: prepare?.secondsReady ?? 0,
+          onToggle: togglePrepare,
+        }}
         sleepRemaining={sleepRemaining}
         onToggle={onToggle}
         onPrevChapter={onPrevChapter}
         onNextChapter={onNextChapter}
         onSkip={onSkip}
         onSeekPct={(p) => seek(Math.round(p * (count - 1)))}
-        onChange={dockChange}
+        onChange={onChange}
       />
     </div>
   );

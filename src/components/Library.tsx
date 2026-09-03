@@ -1,10 +1,14 @@
 import { useMemo, useState } from 'react';
+import { useI18n } from '../i18n/useI18n';
 import type { Book } from '../lib/types';
 import { BookCard } from './BookCard';
+import type { OcrProgress } from '../lib/bridge';
 import { IconBook, IconFolder, IconPlus, IconSparkle, IconLink } from './Icons';
 
 interface LibraryProps {
   books: Book[];
+  /** Live OCR page counters, by book id — only for imports being read right now. */
+  ocr?: Record<string, OcrProgress>;
   onOpen: (b: Book) => void;
   onDelete: (b: Book) => void;
   onAddFile: () => void;
@@ -16,6 +20,7 @@ interface LibraryProps {
 
 /** Compact "paste a link" field — Enter or the button submits an http(s) document URL. */
 function LinkBar({ onAddUrl, autoFocus }: { onAddUrl: (url: string) => void; autoFocus?: boolean }) {
+  const { t } = useI18n();
   const [url, setUrl] = useState('');
   const submit = () => { const u = url.trim(); if (u) { onAddUrl(u); setUrl(''); } };
   return (
@@ -25,16 +30,17 @@ function LinkBar({ onAddUrl, autoFocus }: { onAddUrl: (url: string) => void; aut
         type="url"
         value={url}
         autoFocus={autoFocus}
-        placeholder="Paste a book link (EPUB, PDF…)  https://…/book.epub"
+        placeholder={t('library.linkPlaceholder')}
         onChange={(e) => setUrl(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
       />
-      <button className="btn btn-primary" onClick={submit} disabled={!url.trim()}>Download</button>
+      <button className="btn btn-primary" onClick={submit} disabled={!url.trim()}>{t('library.download')}</button>
     </div>
   );
 }
 
-export function Library({ books, onOpen, onDelete, onAddFile, onAddFolder, onAddUrl, onSample, onDropPaths }: LibraryProps) {
+export function Library({ books, ocr, onOpen, onDelete, onAddFile, onAddFolder, onAddUrl, onSample, onDropPaths }: LibraryProps) {
+  const { t } = useI18n();
   const [q, setQ] = useState('');
   const [drag, setDrag] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
@@ -65,7 +71,7 @@ export function Library({ books, onOpen, onDelete, onAddFile, onAddFolder, onAdd
         <div className="empty-wrap">
           <div className="empty-inner">
             <div className="empty-orb"><IconBook size={38} /></div>
-            <h2 style={{ fontSize: 24, margin: '0 0 8px', letterSpacing: '-0.02em' }}>Your library is empty</h2>
+            <h2 style={{ fontSize: 24, margin: '0 0 8px', letterSpacing: '-0.02em' }}>{t('library.emptyTitle')}</h2>
             <p style={{ color: 'var(--text-faint)', margin: '0 0 24px', lineHeight: 1.6 }}>
               Add a book in any format — EPUB, PDF, DOCX, RTF, TXT, HTML, Markdown — and MnemoReader
               will read it aloud, extracting the text, finding chapters, and vectorizing it into your
@@ -80,15 +86,15 @@ export function Library({ books, onOpen, onDelete, onAddFile, onAddFolder, onAdd
               <div style={{ display: 'flex', justifyContent: 'center', gap: 10, color: 'var(--text-dim)' }}>
                 <IconSparkle size={26} />
               </div>
-              <h3>Drop a book here</h3>
-              <p>EPUB, PDF, DOCX, TXT… — or pick one from disk</p>
+              <h3>{t('library.dropTitle')}</h3>
+              <p>{t('library.dropSub')}</p>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-                <button className="btn btn-primary" onClick={onAddFile}><IconPlus size={16} /> Add a book</button>
-                <button className="btn" onClick={onAddFolder}><IconFolder size={16} /> Import folder</button>
+                <button className="btn btn-primary" onClick={onAddFile}><IconPlus size={16} /> {t('library.addBook')}</button>
+                <button className="btn" onClick={onAddFolder}><IconFolder size={16} /> {t('library.importFolder')}</button>
               </div>
               <div style={{ marginTop: 14 }}><LinkBar onAddUrl={onAddUrl} /></div>
               <button className="btn btn-ghost" onClick={onSample} style={{ marginTop: 12 }}>
-                <IconSparkle size={15} /> Try it with a sample story
+                <IconSparkle size={15} /> {t('library.sample')}
               </button>
             </div>
           </div>
@@ -106,16 +112,16 @@ export function Library({ books, onOpen, onDelete, onAddFile, onAddFolder, onAdd
     >
       <div className="library-head">
         <div>
-          <div className="library-title">Library</div>
+          <div className="library-title">{t('library.title')}</div>
           <div className="library-count">{books.length} book{books.length !== 1 ? 's' : ''}</div>
         </div>
         <div className="library-actions">
           <div className="search">
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search title or author…" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('library.search')} />
           </div>
-          <button className={`btn ${linkOpen ? 'on' : ''}`} onClick={() => setLinkOpen(v => !v)}><IconLink size={16} /> Link</button>
-          <button className="btn" onClick={onAddFolder}><IconFolder size={16} /> Folder</button>
-          <button className="btn btn-primary" onClick={onAddFile}><IconPlus size={16} /> Add book</button>
+          <button className={`btn ${linkOpen ? 'on' : ''}`} onClick={() => setLinkOpen(v => !v)}><IconLink size={16} /> {t('library.link')}</button>
+          <button className="btn" onClick={onAddFolder}><IconFolder size={16} /> {t('library.folder')}</button>
+          <button className="btn btn-primary" onClick={onAddFile}><IconPlus size={16} /> {t('library.addBookShort')}</button>
         </div>
       </div>
 
@@ -123,7 +129,7 @@ export function Library({ books, onOpen, onDelete, onAddFile, onAddFolder, onAdd
 
       <div className="grid">
         {filtered.map((b, i) => (
-          <BookCard key={b.id} book={b} index={i} onOpen={onOpen} onDelete={onDelete} />
+          <BookCard key={b.id} book={b} index={i} ocr={ocr?.[b.id]} onOpen={onOpen} onDelete={onDelete} />
         ))}
       </div>
     </div>

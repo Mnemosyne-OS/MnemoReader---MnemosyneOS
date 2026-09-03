@@ -1,4 +1,7 @@
 import type { Book } from '../lib/types';
+import type { OcrProgress } from '../lib/bridge';
+import { ocrLabel } from '../lib/ocrLabel';
+import { useI18n } from '../i18n/useI18n';
 import { IconBook, IconX } from './Icons';
 
 function ProgressRing({ pct }: { pct: number }) {
@@ -18,7 +21,17 @@ function ProgressRing({ pct }: { pct: number }) {
   );
 }
 
-export function BookCard({ book, index, onOpen, onDelete }: { book: Book; index: number; onOpen: (b: Book) => void; onDelete: (b: Book) => void }) {
+export function BookCard({ book, index, ocr, onOpen, onDelete }: {
+  book: Book;
+  index: number;
+  /** Live OCR page counter for THIS book, while a scan is being read. Absent
+   *  when there is nothing to count — an import with no OCR, or a step that
+   *  cannot report. Never rendered as a 0. */
+  ocr?: OcrProgress;
+  onOpen: (b: Book) => void;
+  onDelete: (b: Book) => void;
+}) {
+  const { t } = useI18n();
   const pct = book.sentenceCount > 1 ? book.progressSentence / (book.sentenceCount - 1) : 0;
   const busy = book.ingest === 'extracting' || book.ingest === 'chaptering' || book.ingest === 'vectorizing';
   const h = book.hue;
@@ -30,14 +43,14 @@ export function BookCard({ book, index, onOpen, onDelete }: { book: Book; index:
       style={{ animationDelay: `${Math.min(index * 40, 400)}ms` }}
       onClick={() => onOpen(book)}
       onContextMenu={(e) => { e.preventDefault(); onDelete(book); }}
-      title="Right-click to remove"
+      title={t('card.rightClick')}
     >
       <div className={`cover ${busy ? 'shimmer' : ''}`} style={{ background: coverBg }}>
         <div className="cover-spine" />
         <div className="cover-glyph"><IconBook size={20} /></div>
         <button
           className="card-del"
-          title="Remove from library (the file on disk is untouched)"
+          title={t('card.remove')}
           onClick={(e) => { e.stopPropagation(); onDelete(book); }}
         >
           <IconX size={16} />
@@ -45,12 +58,14 @@ export function BookCard({ book, index, onOpen, onDelete }: { book: Book; index:
 
         {busy && (
           <div className="badge"><span className="dot" />
-            {book.ingest === 'extracting' ? 'Reading' : book.ingest === 'vectorizing' ? 'Vectorizing' : 'Parsing'}
+            {book.ingest === 'extracting'
+              ? ocrLabel(ocr, t)
+              : book.ingest === 'vectorizing' ? t('card.vectorizing') : t('card.parsing')}
           </div>
         )}
-        {book.ingest === 'archived' && <div className="badge archived">Ready</div>}
+        {book.ingest === 'archived' && <div className="badge archived">{t('card.ready')}</div>}
         {book.ingest === 'error' && (
-          <div className="badge error" title={book.ingestError || 'Import failed'}>Failed · tap to retry</div>
+          <div className="badge error" title={book.ingestError || t('card.importFailed')}>{t('card.failedRetry')}</div>
         )}
 
         <div className="cover-title">{book.title}</div>
@@ -58,7 +73,7 @@ export function BookCard({ book, index, onOpen, onDelete }: { book: Book; index:
       </div>
 
       <div className="card-meta">
-        <span className="card-meta-title">{book.chapters.length ? `${book.chapters.length} chapters` : '—'}</span>
+        <span className="card-meta-title">{book.chapters.length ? t('card.chapters', { n: book.chapters.length }) : t('card.noChapters')}</span>
         {pct > 0 && <ProgressRing pct={pct} />}
       </div>
     </div>
