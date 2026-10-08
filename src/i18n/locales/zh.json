@@ -17,6 +17,7 @@
     "emptyBody": "添加任意格式的书籍 —— EPUB、PDF、DOCX、RTF、TXT、HTML、Markdown —— MnemoReader 会为你朗读：提取文本、识别章节，并把它向量化存入你的「书库」保险库。大多数格式（EPUB、DOCX、TXT、HTML…）无需 OCR。",
     "dropTitle": "把书拖到这里",
     "dropSub": "EPUB、PDF、DOCX、TXT… —— 或从磁盘中选择",
+    "dropNoPath": "此窗口看不到拖入的文件在磁盘上的位置。请用 + 按钮选择它。",
     "sample": "用示例故事试试"
   },
   "card": {

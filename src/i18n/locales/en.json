@@ -17,6 +17,7 @@
     "emptyBody": "Add a book in any format — EPUB, PDF, DOCX, RTF, TXT, HTML, Markdown — and MnemoReader will read it aloud, extracting the text, finding chapters, and vectorizing it into your Library vault. Most formats (EPUB, DOCX, TXT, HTML…) need no OCR.",
     "dropTitle": "Drop a book here",
     "dropSub": "EPUB, PDF, DOCX, TXT… — or pick one from disk",
+    "dropNoPath": "This window cannot see where a dropped file is on your disk. Pick it with the + button.",
     "sample": "Try it with a sample story"
   },
   "card": {

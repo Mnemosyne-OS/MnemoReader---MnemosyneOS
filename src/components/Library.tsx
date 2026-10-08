@@ -43,6 +43,8 @@ export function Library({ books, ocr, onOpen, onDelete, onAddFile, onAddFolder, 
   const { t } = useI18n();
   const [q, setQ] = useState('');
   const [drag, setDrag] = useState(false);
+  // A drop that carried files but no path: said out loud, never a silent no-op.
+  const [dropNoPath, setDropNoPath] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
 
   const filtered = useMemo(() => {
@@ -56,12 +58,16 @@ export function Library({ books, ocr, onOpen, onDelete, onAddFile, onAddFolder, 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDrag(false);
+    const files = Array.from(e.dataTransfer.files);
     const paths: string[] = [];
-    for (const f of Array.from(e.dataTransfer.files)) {
-      // Electron exposes the absolute path on dropped File objects.
+    for (const f of files) {
+      // `File.path` exists up to Electron 31 only. From 32 on, a cartridge (an
+      // iframe, no preload) cannot learn where a dropped file lives, so the
+      // drop must SAY that and send the person to the file picker.
       const p = (f as File & { path?: string }).path;
       if (p) paths.push(p);
     }
+    setDropNoPath(files.length > 0 && paths.length === 0);
     if (paths.length) onDropPaths(paths);
   };
 
@@ -88,6 +94,7 @@ export function Library({ books, ocr, onOpen, onDelete, onAddFile, onAddFolder, 
               </div>
               <h3>{t('library.dropTitle')}</h3>
               <p>{t('library.dropSub')}</p>
+              {dropNoPath && <p role="status" style={{ color: 'var(--text-dim)' }}>{t('library.dropNoPath')}</p>}
               <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
                 <button className="btn btn-primary" onClick={onAddFile}><IconPlus size={16} /> {t('library.addBook')}</button>
                 <button className="btn" onClick={onAddFolder}><IconFolder size={16} /> {t('library.importFolder')}</button>
@@ -110,6 +117,7 @@ export function Library({ books, ocr, onOpen, onDelete, onAddFile, onAddFolder, 
       onDragLeave={() => setDrag(false)}
       onDrop={handleDrop}
     >
+      {dropNoPath && <p role="status" style={{ color: 'var(--text-dim)', margin: '0 0 8px' }}>{t('library.dropNoPath')}</p>}
       <div className="library-head">
         <div>
           <div className="library-title">{t('library.title')}</div>

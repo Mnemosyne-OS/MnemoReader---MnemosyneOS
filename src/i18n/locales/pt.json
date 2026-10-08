@@ -17,6 +17,7 @@
     "emptyBody": "Adicione um livro em qualquer formato — EPUB, PDF, DOCX, RTF, TXT, HTML, Markdown — e o MnemoReader lê-lo-á em voz alta: extrai o texto, encontra os capítulos e vetoriza-o no seu cofre Biblioteca. A maioria dos formatos (EPUB, DOCX, TXT, HTML…) não precisa de OCR.",
     "dropTitle": "Largue um livro aqui",
     "dropSub": "EPUB, PDF, DOCX, TXT… — ou escolha um do disco",
+    "dropNoPath": "Esta janela não vê onde um arquivo arrastado está no seu disco. Escolha-o com o botão +.",
     "sample": "Experimente com uma história de exemplo"
   },
   "card": {
