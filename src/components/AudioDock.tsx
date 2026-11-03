@@ -5,26 +5,13 @@ import {
   IconPlay, IconPause, IconBack15, IconFwd15, IconPrev, IconNext, IconGauge, IconMoon, IconWaveform, IconSparkle, IconInfinityTrace,
 } from './Icons';
 import { useI18n } from '../i18n/useI18n';
+import { BROWSER_SPEED_RANGE, SLEEPS, SPEEDS } from '../lib/readingSteps';
 
 /** Audio duration as a reader reads it: seconds are noise, minutes are the unit. */
 function minutes(seconds: number): string {
   return seconds < 60 ? `${Math.round(seconds)}s` : `${Math.round(seconds / 60)}m`;
 }
 
-/**
- * Every pace the dock could offer — filtered per engine before it is drawn.
- *
- * 🚨 An engine that ignores a value must not be offered it. Chatterbox only ever
- * SLOWS (its pace rides cfg_weight, and anything at or above 1 is the default),
- * XTTS takes no pacing argument at all, Piper has a true tempo. Showing 2× on an
- * engine that cannot go faster is a control that lies — reported as "Chatterbox
- * reste bloqué à 1.5".
- */
-const SPEEDS = [0.75, 1, 1.25, 1.5, 1.75, 2];
-
-/** The system voice takes a real rate (SpeechSynthesisUtterance.rate). */
-const BROWSER_SPEED_RANGE = { min: 0.5, max: 2 };
-const SLEEPS = [0, 5, 15, 30, 45, 60];
 
 /**
  * The voice menu's whole world, resolved by the Reader.

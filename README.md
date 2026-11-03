@@ -94,7 +94,8 @@ src/
 │   └── locales/            # de, en, es, fr, pt, ru, zh
 ├── hooks/
 │   ├── useReaderVoice.ts   # engine selection, playback state, fallbacks
-│   ├── useSandboxCatalogue.ts
+│   ├── useSandboxCatalogue.ts  # the app's own vault, one chronicle per book
+│   ├── useNotesVaultSync.ts    # copies the reader's notes into that vault
 │   └── useSleepTimer.ts
 ├── lib/
 │   ├── bridge.ts           # typed reader ⇄ host actions
@@ -106,17 +107,58 @@ src/
 │   ├── lang.ts             # does any installed voice speak this book?
 │   ├── textStore.ts        # extracted text cached in IndexedDB
 │   ├── vaults.ts           # provisions the Library vault
+│   ├── annotations.ts      # highlights, comments, general notes, colour key (local)
+│   ├── bookSearch.ts       # literal search in the open book and its notes
+│   ├── readerVault.ts      # the sandbox door: app spines, part size, 15 s deadline
+│   ├── notesVaultSync.ts   # notes → vault; catalogueSync.ts: books → vault
+│   ├── syncLoop.ts         # when a sync runs, and how it backs off
 │   └── types.ts
 └── components/
     ├── Library.tsx  BookCard.tsx      # cover grid, progress rings, ingest states
     ├── Reader.tsx   ChapterRail.tsx   # reading canvas + chapter navigation
     ├── AudioDock.tsx                  # transport, scrubber, speed/voice/sleep
     ├── ImportOverlay.tsx  ConfirmDelete.tsx
+    ├── BookNotes.tsx  FloatingNotes.tsx  # highlights in the text, the notes panel
+    ├── BookSearch.tsx BookColorKey.tsx   # search, colour meanings
     └── Icons.tsx    Toast.tsx
 ```
 
-Tests run with `pnpm test` (68 of them, on the sentence splitter, the language
-match, the lead policy and the seven locale files).
+Tests run with `pnpm test` (190 of them in 21 files: the sentence splitter, the
+language match, the lead policy, the seven locale files, the highlights and notes,
+the search, and the vault sync against a fake of the host's real behaviour).
+
+## Highlights, notes, search and progress
+
+Contributed by [@loyallights](https://github.com/loyallights), the first outside
+contribution to MnemoReader.
+
+- **Highlights.** Select text in the reading view, add a comment if you want, and
+  save it. Seven preset colours or any hex colour; the text on a custom colour
+  switches to black or white for contrast. Click a highlight (or focus it and press
+  Enter) to open its note.
+- **Book notes.** One running note per book: highlights and comments grouped by
+  chapter, in reading order, then **General notes** for thoughts tied to no passage.
+  A chapter link takes you back to the passage.
+- **Colour key.** Give each colour your own meaning ("questions", "to quote"). The
+  picker shows it next to the swatch. Removing a colour from the key never recolours
+  or deletes a highlight.
+- **Floating panel.** Move it by its title bar, resize it by its corner, with the
+  mouse or the arrow keys (Shift for larger steps, Home to reset).
+- **Search.** In the open book, in its notes, or both. It matches your words and
+  phrases literally and jumps to the passage or the note.
+- **Progress.** Every card shows how far you have read, 0% included. **Mark finished**
+  adds a badge; finishing a read-aloud without skipped passages marks the book too.
+  The **Show** menu filters finished or unfinished books.
+
+Notes are saved on this device first. Inside Mnemosyne OS they are also copied into
+the app's own `APP-MNEMO-READER` vault, so the assistant can recall them once you
+unlock that vault for AI recall in the host. The cartridge never unlocks it itself.
+If a re-extraction changes a highlighted passage, the quote and its comment stay in
+Book notes, with a warning instead of a wrong link. Highlights never modify the
+original document.
+
+How the sync stays exact (its own spines, parts the host never re-chunks, what is
+forgotten and when) is in [Maintaining reader notes](docs/reader-notes-development.md).
 
 ## License
 

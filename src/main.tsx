@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { onHostConfig } from './sdk/mnemo-sdk';
+import { onHostConfig, onOrbState } from './sdk/mnemo-sdk';
+import { handleOrbState } from './lib/orbPause';
 import App from './App';
 import { adoptHostLang } from './i18n/useI18n';
 import './styles.css';
@@ -22,6 +23,9 @@ import './styles.css';
  * Registered before render so the first paint is already themed and translated.
  */
 onHostConfig((cfg) => adoptHostLang(cfg.lang));
+
+/** The orb listens or speaks: the reading pauses, then starts again (lib/orbPause). */
+onOrbState(({ active }) => handleOrbState(active));
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

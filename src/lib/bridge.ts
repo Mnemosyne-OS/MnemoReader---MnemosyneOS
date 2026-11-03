@@ -7,9 +7,11 @@
  */
 import { MnemoCartridgeSDK } from '../sdk/mnemo-sdk';
 import type { LocalEngineInfo, VoiceEngineId } from './types';
+import { HOST_CALL_MS, readerVaultTransport } from './readerVault';
 
 const PLUGIN_ID = '@mnemosyne-plugins/mnemo-reader';
-const sdk = new MnemoCartridgeSDK(PLUGIN_ID);
+/** Exported for the agent door (doc 149); everything else goes through `bridge`. */
+export const sdk = new MnemoCartridgeSDK(PLUGIN_ID);
 
 // Per-action reply timeouts. Defaults to the SDK's 30 s; long-running host work
 // gets explicit headroom above its own host-side ceiling, and user-paced OS
@@ -148,10 +150,10 @@ export const bridge = {
     sdk.invoke<{ chronicleId?: string }>('reader.ingest', { vault, content, ...(sourceRef ? { sourceRef } : {}) }),
 
   // ── App sandbox vault (doc 58) ───────────────────────────────────────────
-  // A walled-off `APP-MNEMO-READER` vault holds one SOCIAL_CONTACT chronicle
-  // per book so the Vault Pad tile shows an exact book count. This is separate
-  // from the full-text LIBRARY archive above (different vault, no collision):
-  // LIBRARY holds the searchable chunked text; the sandbox holds the catalogue.
+  // A walled-off `APP-MNEMO-READER` vault holds one READER_BOOK chronicle per
+  // book (the Vault Pad tile's exact book count) and the reader's notes. This is
+  // separate from the full-text LIBRARY archive above (different vault, no
+  // collision): LIBRARY holds the searchable chunked text, the sandbox the rest.
 
   /** Idempotently create+mount this app's own walled-off sandbox vault. */
   ensureSandbox: () => sdk.ensureSandbox(),
@@ -160,9 +162,9 @@ export const bridge = {
   describeVaultTile: (tile: { icon?: string; metrics?: { label: string; spine?: string }[] }) =>
     sdk.describeVaultTile(tile),
 
-  /** Anchor one chronicle into a NAMED vault (used for the per-book catalogue). */
-  socialIngest: (vault: string, content: string, spineType?: string) =>
-    sdk.socialIngest(vault, content, spineType),
+  /** The catalogue and notes sync's door into the sandbox: the app's own spines,
+   *  parts the host never re-chunks, a 15 s deadline on every call (readerVault.ts). */
+  vault: readerVaultTransport((action, payload) => sdk.invoke(action, payload, HOST_CALL_MS)),
 
   /** Open a URL in the OS browser. Best-effort. */
   openExternal: (url: string) => sdk.invoke('shell.openExternal', { url }).catch(() => {}),

@@ -31,6 +31,8 @@ export interface Book {
   chapters: Chapter[];
   /** 0-based index of the last sentence the user reached. */
   progressSentence: number;
+  /** Explicit completion; progress alone can include a seek to the last sentence. */
+  finishedAt?: number;
   ingest: IngestState;
   ingestError?: string;
   /** True once vectorized into the Library vault. */

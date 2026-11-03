@@ -1,6 +1,7 @@
 import type { Book } from '../lib/types';
 import type { OcrProgress } from '../lib/bridge';
 import { ocrLabel } from '../lib/ocrLabel';
+import { readingProgress } from '../lib/progress';
 import { useI18n } from '../i18n/useI18n';
 import { IconBook, IconX } from './Icons';
 
@@ -21,7 +22,7 @@ function ProgressRing({ pct }: { pct: number }) {
   );
 }
 
-export function BookCard({ book, index, ocr, onOpen, onDelete }: {
+export function BookCard({ book, index, ocr, onOpen, onDelete, onToggleFinished }: {
   book: Book;
   index: number;
   /** Live OCR page counter for THIS book, while a scan is being read. Absent
@@ -30,9 +31,10 @@ export function BookCard({ book, index, ocr, onOpen, onDelete }: {
   ocr?: OcrProgress;
   onOpen: (b: Book) => void;
   onDelete: (b: Book) => void;
+  onToggleFinished: (b: Book) => void;
 }) {
   const { t } = useI18n();
-  const pct = book.sentenceCount > 1 ? book.progressSentence / (book.sentenceCount - 1) : 0;
+  const pct = readingProgress(book);
   const busy = book.ingest === 'extracting' || book.ingest === 'chaptering' || book.ingest === 'vectorizing';
   const h = book.hue;
   const coverBg = `linear-gradient(150deg, hsl(${h} 62% 42%), hsl(${(h + 40) % 360} 55% 22%))`;
@@ -63,7 +65,8 @@ export function BookCard({ book, index, ocr, onOpen, onDelete }: {
               : book.ingest === 'vectorizing' ? t('card.vectorizing') : t('card.parsing')}
           </div>
         )}
-        {book.ingest === 'archived' && <div className="badge archived">{t('card.ready')}</div>}
+        {!busy && book.finishedAt && <div className="badge archived">{t('card.finished')}</div>}
+        {!book.finishedAt && book.ingest === 'archived' && <div className="badge archived">{t('card.ready')}</div>}
         {book.ingest === 'error' && (
           <div className="badge error" title={book.ingestError || t('card.importFailed')}>{t('card.failedRetry')}</div>
         )}
@@ -74,8 +77,12 @@ export function BookCard({ book, index, ocr, onOpen, onDelete }: {
 
       <div className="card-meta">
         <span className="card-meta-title">{book.chapters.length ? t('card.chapters', { n: book.chapters.length }) : t('card.noChapters')}</span>
-        {pct > 0 && <ProgressRing pct={pct} />}
+        <span className="book-progress-label">{t('card.percentComplete', { pct: Math.round(pct * 100) })}</span>
+        <ProgressRing pct={pct} />
       </div>
+      <button className="book-completion-toggle" disabled={busy} onClick={e => { e.stopPropagation(); onToggleFinished(book); }}>
+        {book.finishedAt ? t('card.markUnfinished') : t('card.markFinished')}
+      </button>
     </div>
   );
 }

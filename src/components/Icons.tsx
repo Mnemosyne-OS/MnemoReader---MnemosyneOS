@@ -84,3 +84,6 @@ export const IconLink = ({ size = 24, className }: P) => (
 export const IconColumns = ({ size = 24, className }: P) => (
   <svg {...base(size)} className={className}><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M12 4v16" /></svg>
 );
+export const IconCheck = ({ size = 24, className }: P) => (
+  <svg {...base(size)} className={className}><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+);

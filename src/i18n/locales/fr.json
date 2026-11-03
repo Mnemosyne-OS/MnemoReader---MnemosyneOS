@@ -18,7 +18,14 @@
     "dropTitle": "Déposez un livre ici",
     "dropSub": "EPUB, PDF, DOCX, TXT… — ou choisissez-en un sur le disque",
     "dropNoPath": "Cette fenêtre ne voit pas où se trouve un fichier glissé sur ton disque. Choisis-le avec le bouton +.",
-    "sample": "Essayer avec une histoire d'exemple"
+    "sample": "Essayer avec une histoire d'exemple",
+    "showFilter": "Afficher",
+    "viewAll": "Tous les livres, terminés en dernier",
+    "viewActive": "Livres non terminés",
+    "viewFinished": "Livres terminés",
+    "noMatch": "Aucun livre dans cette vue. Essayer un autre filtre ou une autre recherche.",
+    "countOne": "{{n}} livre",
+    "countMany": "{{n}} livres"
   },
   "card": {
     "rightClick": "Clic droit pour retirer",
@@ -31,7 +38,11 @@
     "failedRetry": "Échec · touchez pour réessayer",
     "chapters": "{{n}} chapitres",
     "noChapters": "—",
-    "ocrQueued": "en attente · {{n}} devant"
+    "ocrQueued": "en attente · {{n}} devant",
+    "finished": "✓ Terminé",
+    "percentComplete": "{{pct}} % lu",
+    "markFinished": "Marquer comme terminé",
+    "markUnfinished": "Marquer comme non terminé"
   },
   "import": {
     "close": "Fermer",
@@ -51,7 +62,9 @@
     "line2": "• Le fichier d'origine sur le disque n'est jamais touché.",
     "line3": "• Ce que vous avez archivé dans votre coffre Mnemosyne reste dans votre mémoire — cela se gouverne depuis l'hôte, pas d'ici.",
     "cancel": "Annuler",
-    "remove": "Retirer le livre"
+    "remove": "Retirer le livre",
+    "line4": "Les surlignages et commentaires enregistrés pour ce livre sont aussi supprimés de MnemoReader.",
+    "line5": "Leurs copies synchronisées sont aussi retirées du coffre MnemoReader. Si l’hôte est indisponible, ce retrait attend la prochaine synchronisation de la cartouche. Le texte du livre déjà archivé reste dans le coffre Bibliothèque."
   },
   "pdf": {
     "original": "PDF d'origine",
@@ -70,7 +83,13 @@
     "deepOcrTitle": "Refaire un vrai OCR de chaque page (lent, meilleure qualité qu'une couche de texte incorporée)",
     "smaller": "A−",
     "larger": "A+",
-    "preparingVoice": "Préparation de la voix…"
+    "preparingVoice": "Préparation de la voix…",
+    "markFinished": "Marquer comme terminé",
+    "finishedMarkUnfinished": "✓ Terminé, marquer comme non terminé",
+    "themeNight": "Nuit",
+    "themeSepia": "Sépia",
+    "themePaper": "Papier",
+    "themeHint": "Thème de lecture : {{theme}}. Cliquer pour le suivant."
   },
   "dock": {
     "ready": "Prêt",
@@ -138,11 +157,122 @@
     "noVoiceForLanguageUnknown": "Aucune voix en {{language}} n’est disponible — ce livre sera lu avec la voix configurée.",
     "dismiss": "Fermer",
     "dismissAll": "Tout fermer ({{n}})",
-    "importedBackground": "« {{title}} » est prêt"
+    "importedBackground": "« {{title}} » est prêt",
+    "notesRemoveFailed": "Les notes du livre n’ont pas pu être supprimées. Réessayer."
   },
   "language": {
     "fr": "français",
     "es": "espagnol",
     "en": "anglais"
+  },
+  "notes": {
+    "toggle": "Notes du livre ({{n}})",
+    "hint": "Sélectionner du texte pour le surligner ou le commenter.",
+    "readError": "Les notes enregistrées n’ont pas pu être lues. Rouvrir ce livre pour réessayer ; les notes existantes n’ont pas été écrasées.",
+    "saveError": "La modification n’a pas pu être enregistrée. Le stockage est peut-être plein ou indisponible. Réessayer.",
+    "generalSaveError": "Les notes générales n’ont pas pu être enregistrées. Garder ce livre ouvert et cliquer à nouveau sur Enregistrer les notes.",
+    "labelsSaveError": "Les libellés de couleur n’ont pas pu être enregistrés. Garder ce livre ouvert et cliquer à nouveau sur Enregistrer la légende.",
+    "openHighlight": "Ouvrir la note du passage surligné",
+    "openHighlightTitle": "Ouvrir ce surlignage dans les notes du livre",
+    "selectionLabel": "Surligner le passage sélectionné",
+    "commentOptional": "Commentaire (facultatif)",
+    "saveHighlight": "Enregistrer le surlignage",
+    "cancel": "Annuler",
+    "intro": "Enregistré sur cet appareil dans MnemoReader. Chaque surlignage devient une entrée de la note continue de ce livre.",
+    "vaultStandalone": "Ouvrir dans Mnemosyne OS pour synchroniser les notes avec son coffre.",
+    "vaultDemo": "Les notes de démonstration restent locales.",
+    "vaultWaiting": "Les notes locales attendent la connexion au coffre MnemoReader.",
+    "retryVault": "Relancer la synchronisation",
+    "highlightsHeading": "Surlignages et commentaires",
+    "noHighlights": "Aucun surlignage pour l’instant. Sélectionner un passage du livre pour commencer.",
+    "otherPassages": "Autres passages enregistrés",
+    "returnToPassage": "Revenir au passage",
+    "general": "Notes générales",
+    "generalPlaceholder": "Noter des réflexions sur ce livre sans sélectionner de passage.",
+    "savedLocal": "Enregistré sur cet appareil.",
+    "unsaved": "Modifications non enregistrées. Réessayer l’enregistrement.",
+    "saveNotes": "Enregistrer les notes",
+    "quoteMoved": "Le texte du livre a changé. Cette citation est conservée, mais son emplacement est à vérifier.",
+    "comment": "Commentaire",
+    "saveChanges": "Enregistrer les modifications",
+    "editHighlight": "Modifier le surlignage",
+    "removeHighlight": "Supprimer le surlignage",
+    "panelLabel": "Notes de {{title}}",
+    "panelHeading": "{{title}} · Notes",
+    "move": "Déplacer les notes du livre",
+    "moveHint": "Glisser pour déplacer. Avec le focus, utiliser les flèches ; Début rétablit la position.",
+    "close": "Fermer les notes",
+    "resize": "Redimensionner les notes du livre",
+    "resizeHint": "Glisser pour redimensionner, ou utiliser les flèches avec le focus."
+  },
+  "colorKey": {
+    "title": "Légende des couleurs",
+    "unsavedShort": "modifications non enregistrées",
+    "intro": "Donner à chaque couleur un sens propre pour ce livre. Les libellés sont vides au départ.",
+    "labelAria": "Libellé de la couleur {{name}}",
+    "labelPlaceholder": "Libellé",
+    "removeAria": "Retirer {{name}} de la légende",
+    "removeTitle": "Retirer de la légende",
+    "empty": "La légende des couleurs est vide. Ajouter une couleur ci-dessous au besoin.",
+    "removeNote": "Retirer une couleur conserve les surlignages existants et son libellé enregistré.",
+    "restoreLabel": "Rajouter une couleur retirée",
+    "choose": "Choisir une couleur",
+    "addColor": "Ajouter la couleur",
+    "customHex": "Couleur personnalisée (hex)",
+    "addCustom": "Ajouter la couleur personnalisée",
+    "hexInvalid": "Saisir une couleur hexadécimale à 3 ou 6 chiffres.",
+    "unsaved": "Les libellés de couleur ont des modifications non enregistrées.",
+    "saved": "Libellés de couleur enregistrés sur cet appareil.",
+    "save": "Enregistrer la légende"
+  },
+  "colorPicker": {
+    "legend": "Couleur du surlignage",
+    "swatchAria": "Surlignage {{name}}",
+    "swatchAriaLabelled": "Surlignage {{name}} : {{label}}",
+    "hex": "Couleur hex",
+    "hexInvalid": "Saisir une couleur hexadécimale à 3 ou 6 chiffres, par exemple #ABC ou #AABBCC.",
+    "preview": "Aperçu du surlignage"
+  },
+  "color": {
+    "red": "Rouge",
+    "orange": "Orange",
+    "yellow": "Jaune",
+    "green": "Vert",
+    "blue": "Bleu",
+    "indigo": "Indigo",
+    "violet": "Violet"
+  },
+  "search": {
+    "open": "Chercher dans le livre et les notes",
+    "panel": "Recherche dans ce livre et ses notes",
+    "heading": "Recherche · {{title}}",
+    "close": "Fermer la recherche",
+    "query": "Mots, phrase ou libellé de couleur",
+    "placeholder": "Chercher dans ce livre et les notes",
+    "scope": "Chercher dans",
+    "scopeAll": "Livre et notes",
+    "scopeBook": "Texte du livre",
+    "scopeNotes": "Notes et libellés de thème",
+    "help": "Trouve des mots et des phrases, libellés de couleur compris. Seul le livre ouvert est parcouru ; le rappel IA se charge des recherches plus larges par le sens.",
+    "countOne": "1 passage ou note trouvé",
+    "countMany": "{{n}} passages ou notes trouvés",
+    "none": "Aucun résultat. Essayer un autre mot ou un libellé de couleur.",
+    "more": "Plus de résultats",
+    "resultNote": "Note · {{chapter}}",
+    "resultPassage": "Passage · {{chapter}}"
+  },
+  "vault": {
+    "pending": "Notes enregistrées localement ; synchronisation du coffre en attente.",
+    "syncing": "Synchronisation des notes avec le coffre MnemoReader…",
+    "synced": "Notes enregistrées dans le coffre MnemoReader. Le rappel IA suit les permissions du coffre.",
+    "cleared": "Aucune note à synchroniser. Les anciennes copies ont été retirées du coffre.",
+    "failed": "La synchronisation du coffre demande attention : {{error}} Les notes locales sont conservées.",
+    "failedPending": "Des notes ou suppressions de notes sont en attente ; la synchronisation du coffre a échoué : {{error}}",
+    "notice": "Des notes ou suppressions de notes ne sont pas encore synchronisées avec le coffre. Le rappel IA peut encore contenir d’anciens détails. Les notes locales sont conservées.",
+    "retryNotes": "Relancer la synchronisation des notes"
+  },
+  "tile": {
+    "books": "Livres",
+    "annotated": "Annotés"
   }
 }

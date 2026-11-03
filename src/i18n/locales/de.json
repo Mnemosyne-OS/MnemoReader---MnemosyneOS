@@ -18,7 +18,14 @@
     "dropTitle": "Buch hier ablegen",
     "dropSub": "EPUB, PDF, DOCX, TXT… — oder eines von der Festplatte wählen",
     "dropNoPath": "Dieses Fenster sieht nicht, wo eine abgelegte Datei auf deinem Datenträger liegt. Wähle sie mit der Schaltfläche +.",
-    "sample": "Mit einer Beispielgeschichte ausprobieren"
+    "sample": "Mit einer Beispielgeschichte ausprobieren",
+    "showFilter": "Anzeigen",
+    "viewAll": "Alle Bücher, beendete zuletzt",
+    "viewActive": "Nicht beendete Bücher",
+    "viewFinished": "Beendete Bücher",
+    "noMatch": "Keine Bücher in dieser Ansicht. Anderen Filter oder andere Suche versuchen.",
+    "countOne": "{{n}} Buch",
+    "countMany": "{{n}} Bücher"
   },
   "card": {
     "rightClick": "Rechtsklick zum Entfernen",
@@ -31,7 +38,11 @@
     "failedRetry": "Fehlgeschlagen · zum Wiederholen tippen",
     "chapters": "{{n}} Kapitel",
     "noChapters": "—",
-    "ocrQueued": "wartet · {{n}} davor"
+    "ocrQueued": "wartet · {{n}} davor",
+    "finished": "✓ Beendet",
+    "percentComplete": "{{pct}} % gelesen",
+    "markFinished": "Als beendet markieren",
+    "markUnfinished": "Als nicht beendet markieren"
   },
   "import": {
     "close": "Schließen",
@@ -51,7 +62,9 @@
     "line2": "• Die Originaldatei auf der Festplatte wird nie angerührt.",
     "line3": "• Was Sie in Ihren Mnemosyne-Tresor archiviert haben, bleibt in Ihrem Gedächtnis — das steuern Sie vom Host aus, nicht von hier.",
     "cancel": "Abbrechen",
-    "remove": "Buch entfernen"
+    "remove": "Buch entfernen",
+    "line4": "Dabei werden auch die gespeicherten Markierungen und Kommentare dieses Buchs aus MnemoReader entfernt.",
+    "line5": "Die synchronisierten Notizkopien werden ebenfalls aus dem MnemoReader-Tresor entfernt. Ist der Host nicht erreichbar, wartet das Entfernen, bis die Kartusche wieder synchronisieren kann. Bereits archivierter Buchtext bleibt im Bibliothek-Tresor."
   },
   "pdf": {
     "original": "Original-PDF",
@@ -70,7 +83,13 @@
     "deepOcrTitle": "Jede Seite richtig neu per OCR erfassen (langsam, bessere Qualität als eine eingebettete Textebene)",
     "smaller": "A−",
     "larger": "A+",
-    "preparingVoice": "Stimme wird vorbereitet…"
+    "preparingVoice": "Stimme wird vorbereitet…",
+    "markFinished": "Als beendet markieren",
+    "finishedMarkUnfinished": "✓ Beendet, als nicht beendet markieren",
+    "themeNight": "Nacht",
+    "themeSepia": "Sepia",
+    "themePaper": "Papier",
+    "themeHint": "Lesethema: {{theme}}. Klicken für das nächste."
   },
   "dock": {
     "ready": "Bereit",
@@ -138,11 +157,122 @@
     "noVoiceForLanguageUnknown": "Es ist keine Stimme für {{language}} verfügbar — dieses Buch wird mit der eingestellten Stimme gelesen.",
     "dismiss": "Schließen",
     "dismissAll": "Alle schließen ({{n}})",
-    "importedBackground": "„{{title}}“ ist fertig"
+    "importedBackground": "„{{title}}“ ist fertig",
+    "notesRemoveFailed": "Die Buchnotizen konnten nicht entfernt werden. Bitte erneut versuchen."
   },
   "language": {
     "fr": "Französisch",
     "es": "Spanisch",
     "en": "Englisch"
+  },
+  "notes": {
+    "toggle": "Buchnotizen ({{n}})",
+    "hint": "Text auswählen, um ihn zu markieren oder zu kommentieren.",
+    "readError": "Gespeicherte Notizen konnten nicht gelesen werden. Buch erneut öffnen, um es noch einmal zu versuchen; vorhandene Notizen wurden nicht überschrieben.",
+    "saveError": "Die Änderung konnte nicht gespeichert werden. Der Speicher ist eventuell voll oder nicht verfügbar. Bitte erneut versuchen.",
+    "generalSaveError": "Die allgemeinen Notizen konnten nicht gespeichert werden. Buch geöffnet lassen und erneut auf Notizen speichern klicken.",
+    "labelsSaveError": "Die Farbbezeichnungen konnten nicht gespeichert werden. Buch geöffnet lassen und erneut auf Farblegende speichern klicken.",
+    "openHighlight": "Notiz zur markierten Stelle öffnen",
+    "openHighlightTitle": "Diese Markierung in den Buchnotizen öffnen",
+    "selectionLabel": "Ausgewählte Stelle markieren",
+    "commentOptional": "Kommentar (optional)",
+    "saveHighlight": "Markierung speichern",
+    "cancel": "Abbrechen",
+    "intro": "Auf diesem Gerät in MnemoReader gespeichert. Jede Markierung wird ein Eintrag in der fortlaufenden Notiz dieses Buchs.",
+    "vaultStandalone": "In Mnemosyne OS öffnen, um Notizen mit dessen Tresor zu synchronisieren.",
+    "vaultDemo": "Demo-Notizen bleiben lokal.",
+    "vaultWaiting": "Lokale Notizen warten auf die Verbindung zum MnemoReader-Tresor.",
+    "retryVault": "Tresor-Sync wiederholen",
+    "highlightsHeading": "Markierungen und Kommentare",
+    "noHighlights": "Noch keine Markierungen. Zum Beginnen eine Stelle im Buch auswählen.",
+    "otherPassages": "Weitere gespeicherte Stellen",
+    "returnToPassage": "Zur Stelle springen",
+    "general": "Allgemeine Notizen",
+    "generalPlaceholder": "Gedanken zu diesem Buch notieren, ohne eine Stelle auszuwählen.",
+    "savedLocal": "Auf diesem Gerät gespeichert.",
+    "unsaved": "Ungespeicherte Änderungen. Speichern erneut versuchen.",
+    "saveNotes": "Notizen speichern",
+    "quoteMoved": "Der Buchtext hat sich geändert. Dieses Zitat bleibt erhalten, seine Position muss aber geprüft werden.",
+    "comment": "Kommentar",
+    "saveChanges": "Änderungen speichern",
+    "editHighlight": "Markierung bearbeiten",
+    "removeHighlight": "Markierung entfernen",
+    "panelLabel": "Notizen zu {{title}}",
+    "panelHeading": "{{title}} · Notizen",
+    "move": "Buchnotizen verschieben",
+    "moveHint": "Ziehen zum Verschieben. Mit Fokus die Pfeiltasten nutzen; Pos1 setzt die Position zurück.",
+    "close": "Notizen schließen",
+    "resize": "Größe der Buchnotizen ändern",
+    "resizeHint": "Ziehen zum Ändern der Größe, oder mit Fokus die Pfeiltasten nutzen."
+  },
+  "colorKey": {
+    "title": "Farblegende",
+    "unsavedShort": "ungespeicherte Änderungen",
+    "intro": "Jeder Farbe eine eigene Bedeutung für dieses Buch geben. Bezeichnungen sind anfangs leer.",
+    "labelAria": "Bezeichnung für {{name}}",
+    "labelPlaceholder": "Eigene Bezeichnung",
+    "removeAria": "{{name}} aus der Farblegende entfernen",
+    "removeTitle": "Aus der Farblegende entfernen",
+    "empty": "Die Farblegende ist leer. Bei Bedarf unten eine Farbe hinzufügen.",
+    "removeNote": "Beim Entfernen einer Farbe bleiben vorhandene Markierungen und ihre gespeicherte Bezeichnung erhalten.",
+    "restoreLabel": "Entfernte Farbe wieder hinzufügen",
+    "choose": "Farbe wählen",
+    "addColor": "Farbe hinzufügen",
+    "customHex": "Eigene Farbe (Hex)",
+    "addCustom": "Eigene Farbe hinzufügen",
+    "hexInvalid": "Eine Hex-Farbe mit 3 oder 6 Stellen eingeben.",
+    "unsaved": "Die Farbbezeichnungen haben ungespeicherte Änderungen.",
+    "saved": "Farbbezeichnungen auf diesem Gerät gespeichert.",
+    "save": "Farblegende speichern"
+  },
+  "colorPicker": {
+    "legend": "Markierungsfarbe",
+    "swatchAria": "Markierung {{name}}",
+    "swatchAriaLabelled": "Markierung {{name}}: {{label}}",
+    "hex": "Hex-Farbe",
+    "hexInvalid": "Eine Hex-Farbe mit 3 oder 6 Stellen eingeben, zum Beispiel #ABC oder #AABBCC.",
+    "preview": "Vorschau der Markierung"
+  },
+  "color": {
+    "red": "Rot",
+    "orange": "Orange",
+    "yellow": "Gelb",
+    "green": "Grün",
+    "blue": "Blau",
+    "indigo": "Indigo",
+    "violet": "Violett"
+  },
+  "search": {
+    "open": "Buch und Notizen durchsuchen",
+    "panel": "Dieses Buch und seine Notizen durchsuchen",
+    "heading": "Suche · {{title}}",
+    "close": "Suche schließen",
+    "query": "Wörter, Satz oder Farbbezeichnung",
+    "placeholder": "Dieses Buch und die Notizen durchsuchen",
+    "scope": "Suchen in",
+    "scopeAll": "Buch und Notizen",
+    "scopeBook": "Buchtext",
+    "scopeNotes": "Eigene Notizen und Themenbezeichnungen",
+    "help": "Findet Wörter und Sätze, auch in den Farbbezeichnungen. Durchsucht nur das geöffnete Buch; breitere Suchen nach Bedeutung übernimmt der KI-Abruf.",
+    "countOne": "1 passende Stelle oder Notiz",
+    "countMany": "{{n}} passende Stellen oder Notizen",
+    "none": "Keine Treffer. Ein anderes Wort oder eine Farbbezeichnung versuchen.",
+    "more": "Weitere Ergebnisse anzeigen",
+    "resultNote": "Notiz · {{chapter}}",
+    "resultPassage": "Textstelle · {{chapter}}"
+  },
+  "vault": {
+    "pending": "Notizen lokal gespeichert; Tresor-Sync ausstehend.",
+    "syncing": "Notizen werden mit dem MnemoReader-Tresor synchronisiert…",
+    "synced": "Notizen im MnemoReader-Tresor gespeichert. Der KI-Abruf folgt den Tresor-Berechtigungen.",
+    "cleared": "Keine Notizen zu synchronisieren. Frühere Notizkopien wurden aus dem Tresor entfernt.",
+    "failed": "Der Tresor-Sync braucht Aufmerksamkeit: {{error}} Die lokalen Notizen bleiben erhalten.",
+    "failedPending": "Notizen oder Notizlöschungen stehen aus; Tresor-Sync fehlgeschlagen: {{error}}",
+    "notice": "Einige Buchnotizen oder Notizlöschungen sind nicht mit dem Tresor synchronisiert. Der KI-Abruf kennt eventuell noch ältere Details. Die lokalen Notizen bleiben erhalten.",
+    "retryNotes": "Notizen-Sync wiederholen"
+  },
+  "tile": {
+    "books": "Bücher",
+    "annotated": "Kommentiert"
   }
 }

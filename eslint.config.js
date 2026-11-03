@@ -30,13 +30,9 @@ export default tseslint.config(
     ],
     languageOptions: {
       parserOptions: {
-        // Tests are excluded from tsconfig.json on purpose (the app build must
-        // not depend on the test runner being installed), so the project
-        // service cannot type them — allowDefaultProject lets it lint them
-        // anyway instead of reporting a parsing error on the whole file.
-        projectService: {
-          allowDefaultProject: ['src/*/*.test.ts', 'src/*/*/*.test.ts'],
-        },
+        // Keep tests out of the app build, but include all of them in a separate
+        // lint project so type-aware checks cover the whole test suite.
+        project: './tsconfig.eslint.json',
         tsconfigRootDir: import.meta.dirname,
       },
     },

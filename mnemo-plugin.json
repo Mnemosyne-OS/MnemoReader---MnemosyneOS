@@ -1,7 +1,7 @@
 {
   "name": "@mnemosyne-plugins/mnemo-reader",
   "displayName": "MnemoReader",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "category": "Research",
   "icon": "icon.svg",
   "vendor": "Mnemosyne Labs",
@@ -45,5 +45,279 @@
       "defaultWidth": 1180,
       "defaultHeight": 840
     }
-  ]
+  ],
+  "agentGuide": [
+    "Name a book or a chapter the way the person says it (« Dune », « chapitre 3 », « le chapitre sur la baleine »): the reader finds it by its words, and an id still works. Several matches are refused with their names (AMBIGUOUS): pick one and call again.",
+    "To read aloud: play (with book to open it first, with chapter to start there); pause stops it where it is. play, goToChapter, goToPassage and goToPercent take book to open it first; skip and pause act on the book open.",
+    "A chapter by its number is given as digits (« 3 »). To move by one: goToChapter with move next, previous or restart.",
+    "To find a passage: goToPassage with a few of its words. Pages do not exist here: the text is read sentence by sentence, so use goToPercent for « the middle of the book ».",
+    "Faster, slower, the text size, the night / sepia / paper theme and the sleep timer: setReading. reading says where the reader is."
+  ],
+  "agentActions": [
+    {
+      "id": "books",
+      "summary": "The books in the library: id, title, author, format, chapters, how far the person has read, import state, and which one is open.",
+      "details": "progressPercent is null for a book with no text yet, and 100 for a book marked finished (finished: true), as its card shows. import is idle, extracting, chaptering, vectorizing, archived or error (importError says why). inMemory = archived in the Library vault.",
+      "effect": "read",
+      "params": {}
+    },
+    {
+      "id": "book",
+      "summary": "One book in full: its chapter titles, the chapter the person has reached, and how far they read.",
+      "details": "chapterTitles lists the first 200; chaptersNotShown counts the rest.",
+      "effect": "read",
+      "params": {
+        "bookId": {
+          "type": "string",
+          "description": "The book: its title or its author as the person says it (« Dune », « le livre de Herbert »), or its id.",
+          "maxLength": 300
+        }
+      },
+      "required": [
+        "bookId"
+      ]
+    },
+    {
+      "id": "openBook",
+      "summary": "Open a book in the reader, where the person left off, as a tap on its cover does.",
+      "details": "A book still importing is NOT_READY; a failed import is IMPORT_FAILED (the person retries it from the library).",
+      "effect": "write",
+      "params": {
+        "bookId": {
+          "type": "string",
+          "description": "The book: its title or its author as the person says it (« Dune », « le livre de Herbert »), or its id.",
+          "maxLength": 300
+        }
+      },
+      "required": [
+        "bookId"
+      ]
+    },
+    {
+      "id": "closeBook",
+      "summary": "Close the reader and go back to the library, as the back arrow does.",
+      "effect": "write",
+      "params": {}
+    },
+    {
+      "id": "importUrl",
+      "summary": "Download a document (EPUB, PDF, DOCX, HTML...) from a link, import it into the library and archive it in the Library vault.",
+      "details": "Answers started at once: a download and its extraction can take minutes. Call books to follow it (import goes to archived, or error with importError). One import at a time (BUSY).",
+      "effect": "write",
+      "params": {
+        "url": {
+          "type": "string",
+          "description": "An http or https link to the document.",
+          "maxLength": 2000
+        }
+      },
+      "required": [
+        "url"
+      ]
+    },
+    {
+      "id": "reading",
+      "summary": "Where the open reader is: the book, the chapter, the sentence and the percent, whether it is reading aloud, the voice and the paces it takes, the sleep timer, and the reading settings.",
+      "details": "open is null on the library (the settings are still given).",
+      "effect": "read",
+      "params": {}
+    },
+    {
+      "id": "play",
+      "summary": "Read aloud, as the play button does: from where the person left off, or from the start of a chapter.",
+      "details": "Resumes a pause. With book, opens it first. Already reading and a chapter given: goes there and keeps reading.",
+      "effect": "write",
+      "params": {
+        "book": {
+          "type": "string",
+          "description": "The book to open first: its title or author as the person says it, or its id. Absent = the book open.",
+          "maxLength": 300
+        },
+        "chapter": {
+          "type": "string",
+          "description": "The chapter: its number as digits (« 3 ») or words of its title, or its id.",
+          "maxLength": 200
+        }
+      }
+    },
+    {
+      "id": "pause",
+      "summary": "Stop reading aloud where it is, as the pause button does; play resumes from there.",
+      "effect": "write",
+      "params": {}
+    },
+    {
+      "id": "goToChapter",
+      "summary": "Go to a chapter, as a click in the chapter list does: a chapter named, or the next, the previous, or the start of this one.",
+      "details": "A reading going on keeps going from there. Give chapter or move, not both.",
+      "effect": "write",
+      "params": {
+        "chapter": {
+          "type": "string",
+          "description": "The chapter: its number as digits (« 3 ») or words of its title, or its id.",
+          "maxLength": 200
+        },
+        "move": {
+          "type": "string",
+          "description": "next, previous, or restart (the start of the chapter being read).",
+          "enum": [
+            "next",
+            "previous",
+            "restart"
+          ]
+        },
+        "book": {
+          "type": "string",
+          "description": "The book to open first: its title or author as the person says it, or its id. Absent = the book open.",
+          "maxLength": 300
+        }
+      }
+    },
+    {
+      "id": "goToPassage",
+      "summary": "Go to the sentence that holds a few words the person remembers.",
+      "details": "Several sentences holding them are refused with where they are: add words or the chapter.",
+      "effect": "write",
+      "params": {
+        "words": {
+          "type": "string",
+          "description": "A few words of the passage, as the person says them.",
+          "maxLength": 300
+        },
+        "chapter": {
+          "type": "string",
+          "description": "The chapter: its number as digits (« 3 ») or words of its title, or its id.",
+          "maxLength": 200
+        },
+        "book": {
+          "type": "string",
+          "description": "The book to open first: its title or author as the person says it, or its id. Absent = the book open.",
+          "maxLength": 300
+        }
+      },
+      "required": [
+        "words"
+      ]
+    },
+    {
+      "id": "goToPercent",
+      "summary": "Go to a point of the book by how far into it (50 = the middle), as a click on the progress bar does.",
+      "effect": "write",
+      "params": {
+        "percent": {
+          "type": "number",
+          "description": "From 0 (the start) to 100 (the end).",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "book": {
+          "type": "string",
+          "description": "The book to open first: its title or author as the person says it, or its id. Absent = the book open.",
+          "maxLength": 300
+        }
+      },
+      "required": [
+        "percent"
+      ]
+    },
+    {
+      "id": "skip",
+      "summary": "Go forward or back by a few sentences in the book open, as the skip buttons do.",
+      "effect": "write",
+      "params": {
+        "sentences": {
+          "type": "number",
+          "description": "How many sentences: positive goes forward, negative goes back.",
+          "minimum": -200,
+          "maximum": 200
+        }
+      },
+      "required": [
+        "sentences"
+      ]
+    },
+    {
+      "id": "setReading",
+      "summary": "Change how the book is read: the pace, the text size, the theme, the sleep timer. Saved at once.",
+      "details": "speed faster / slower steps through the paces the voice takes, as the speed menu does; a voice with one pace is refused (NO_SPEED). sleepMinutes 0 turns the timer off.",
+      "effect": "write",
+      "params": {
+        "speed": {
+          "type": "string",
+          "description": "faster or slower, one step.",
+          "enum": [
+            "faster",
+            "slower"
+          ]
+        },
+        "rate": {
+          "type": "number",
+          "description": "An exact pace (1 = normal).",
+          "minimum": 0.5,
+          "maximum": 2
+        },
+        "text": {
+          "type": "string",
+          "description": "larger or smaller, one step, as the A+ and A- chips.",
+          "enum": [
+            "larger",
+            "smaller"
+          ]
+        },
+        "fontSize": {
+          "type": "number",
+          "description": "An exact text size in pixels.",
+          "minimum": 15,
+          "maximum": 30
+        },
+        "theme": {
+          "type": "string",
+          "description": "night (dark), sepia, or paper (light).",
+          "enum": [
+            "night",
+            "sepia",
+            "paper"
+          ]
+        },
+        "sleepMinutes": {
+          "type": "number",
+          "description": "Stop reading after this many minutes; 0 turns the timer off.",
+          "minimum": 0,
+          "maximum": 180
+        }
+      }
+    }
+  ],
+  "voiceCommands": {
+    "fr": [
+      "ouvre Dune",
+      "lis-moi le chapitre 3 de Dune",
+      "mets la lecture en pause",
+      "reprends la lecture",
+      "chapitre suivant",
+      "va au passage sur la baleine blanche",
+      "lis plus lentement",
+      "arrête la lecture dans 15 minutes"
+    ],
+    "en": [
+      "open Dune",
+      "read me chapter 3 of Dune",
+      "pause the reading",
+      "continue reading",
+      "next chapter",
+      "go to the passage about the white whale",
+      "read slower",
+      "stop reading in 15 minutes"
+    ],
+    "es": [
+      "abre Dune",
+      "léeme el capítulo 3 de Dune",
+      "pausa la lectura",
+      "sigue leyendo",
+      "capítulo siguiente",
+      "ve al pasaje de la ballena blanca",
+      "lee más despacio",
+      "para la lectura en 15 minutos"
+    ]
+  }
 }

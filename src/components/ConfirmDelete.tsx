@@ -26,6 +26,8 @@ export function ConfirmDelete({ book, onCancel, onConfirm }: {
           <p style={{ margin: '0 0 8px' }}>{t('confirm.line1')}</p>
           <p style={{ margin: '0 0 8px' }}>{t('confirm.line2')}</p>
           <p style={{ margin: 0 }}>{t('confirm.line3')}</p>
+          <p>{t('confirm.line4')}</p>
+          <p>{t('confirm.line5')}</p>
         </div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
           <button className="btn btn-ghost" onClick={onCancel}>{t('confirm.cancel')}</button>

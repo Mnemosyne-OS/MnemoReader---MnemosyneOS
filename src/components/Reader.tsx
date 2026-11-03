@@ -5,10 +5,21 @@ import { useReaderVoice } from '../hooks/useReaderVoice';
 import { useSleepTimer } from '../hooks/useSleepTimer';
 import { useI18n } from '../i18n/useI18n';
 import { bridge, isFramed } from '../lib/bridge';
+import { publishReaderTransport, withdrawReaderTransport } from '../lib/readerTransport';
+import { BROWSER_SPEED_RANGE } from '../lib/readingSteps';
 import { ChapterRail } from './ChapterRail';
 import { AudioDock } from './AudioDock';
 import { PdfCompare } from './PdfCompare';
+import { BookNotes } from './BookNotes';
+import type { ReactNode } from 'react';
 import { IconChevron, IconColumns, IconSparkle, IconInfinityTrace } from './Icons';
+
+/** The chip shows the theme's name in the person's language, never the setting's raw value. */
+const THEME_KEY: Record<ReaderSettings['theme'], string> = {
+  night: 'reader.themeNight',
+  sepia: 'reader.themeSepia',
+  paper: 'reader.themePaper',
+};
 
 interface ReaderProps {
   book: Book;
@@ -16,12 +27,14 @@ interface ReaderProps {
   settings: ReaderSettings;
   onChange: (patch: Partial<ReaderSettings>) => void;
   onProgress: (sentenceIndex: number) => void;
+  onFinish: () => void;
+  onToggleFinished: () => void;
   onBack: () => void;
   onDeepOcr: () => void;
   notify: (kind: 'info' | 'ok' | 'err', text: string) => void;
 }
 
-export function Reader({ book, loaded, settings, onChange, onProgress, onBack, onDeepOcr, notify }: ReaderProps) {
+export function Reader({ book, loaded, settings, onChange, onProgress, onFinish, onToggleFinished, onBack, onDeepOcr, notify }: ReaderProps) {
   const { t } = useI18n();
   const { sentences } = loaded;
   const count = sentences.length;
@@ -57,9 +70,10 @@ export function Reader({ book, loaded, settings, onChange, onProgress, onBack, o
 
   // Latest callbacks/settings for the player hooks (avoids stale closures without
   // re-creating the player). Assigned below, once the engine's label is known.
-  const live = useRef({ onProgress, onChange, notify, engine: settings.engine, engineLabel: '' });
-
-  live.current = { onProgress, onChange, notify, engine: activeEngine, engineLabel };
+  const live = useRef({
+    onProgress, onFinish, onChange, notify, engine: settings.engine, engineLabel: '',
+    speedRange: null as { min: number; max: number } | null, sleepRemaining: null as number | null,
+  });
 
   /**
    * Once the engine's real speed is known, say so if it cannot keep up.
@@ -122,6 +136,7 @@ export function Reader({ book, loaded, settings, onChange, onProgress, onBack, o
       onEnd: () => {
         setActiveWord(null);
         const missed = skipped.current;
+        if (missed === 0) live.current.onFinish();
         live.current.notify(missed ? 'err' : 'ok',
           missed === 0 ? t('toast.finished')
             : missed === 1 ? t('toast.finishedWithGapsOne')
@@ -144,7 +159,14 @@ export function Reader({ book, loaded, settings, onChange, onProgress, onBack, o
     p.load(sentences);
     p.seek(Math.min(book.progressSentence, Math.max(0, count - 1))); // reposition without autoplay
     playerRef.current = p;
-    return () => { p.dispose(); playerRef.current = null; };
+    // The agent door (doc 149) drives this same player: what the dock's buttons do, a spoken sentence does.
+    publishReaderTransport({
+      bookId: book.id,
+      player: p,
+      sentences,
+      voice: () => ({ engineLabel: live.current.engineLabel, speedRange: live.current.speedRange, sleepRemaining: live.current.sleepRemaining }),
+    });
+    return () => { withdrawReaderTransport(p); p.dispose(); playerRef.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -167,13 +189,25 @@ export function Reader({ book, loaded, settings, onChange, onProgress, onBack, o
     onChange({ sleepMinutes: 0 });
   });
 
+  // Assigned once everything it carries is known (the engine's label, its paces, the sleep timer).
+  live.current = {
+    onProgress, onFinish, onChange, notify, engine: activeEngine, engineLabel,
+    // The paces the dock would offer: the system voice takes a real rate, a neural engine says its own range (null = none).
+    speedRange: !isNeuralEngine(activeEngine) ? BROWSER_SPEED_RANGE : voice.engineInfo?.speedRange ?? null,
+    sleepRemaining,
+  };
+
   // Auto-scroll the active sentence into view.
   useEffect(() => {
     sentenceElRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }, [activeSentence]);
 
   // ── transport handlers ──────────────────────────────────────────────────────
-  const seek = (i: number) => playerRef.current?.seek(Math.max(0, Math.min(i, count - 1)));
+  const seek = (i: number) => {
+    const target = Math.max(0, Math.min(i, count - 1));
+    playerRef.current?.seek(target);
+    if (target === activeSentence) sentenceElRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  };
   const onToggle = () => playerRef.current?.toggle();
   const onSkip = (d: number) => seek(activeSentence + d);
   const onPrevChapter = () => {
@@ -212,22 +246,12 @@ export function Reader({ book, loaded, settings, onChange, onProgress, onBack, o
   };
 
   // ── prose (only the current chapter is materialized, for performance) ────────
-  const renderSentence = (i: number) => {
-    const text = sentences[i];
-    if (i === activeSentence && activeWord) {
-      const before = text.slice(0, activeWord.start);
-      const word = text.slice(activeWord.start, activeWord.end);
-      const after = text.slice(activeWord.end);
-      return (
-        <span key={i} ref={sentenceElRef} className="sentence active">
-          {before}<span className="kw">{word}</span>{after}{' '}
-        </span>
-      );
-    }
-    if (i === activeSentence) return <span key={i} ref={sentenceElRef} className="sentence active">{text}{' '}</span>;
-    return <span key={i} className="sentence">{text}{' '}</span>;
-  };
-
+  const renderSentence = (i: number, render: (text: string, sentence: number, word: { start: number; end: number } | null) => ReactNode) => (
+    <span key={i} data-sentence={i} ref={i === activeSentence ? sentenceElRef : undefined}
+      className={`sentence${i === activeSentence ? ' active' : ''}`}>
+      {render(sentences[i], i, i === activeSentence ? activeWord : null)}{' '}
+    </span>
+  );
   // Group the chapter's sentences into paragraphs — a blank line in the source
   // between two sentences starts a new one — so the page reads like a book, not a wall.
   const proseStart = chapter?.sentenceStart ?? 0;
@@ -265,6 +289,7 @@ export function Reader({ book, loaded, settings, onChange, onProgress, onBack, o
             <div className="brand-sub">{t('reader.chapterOf', { n: activeChapter + 1, total: book.chapters.length })}</div>
           </div>
           <div className="topbar-spacer" />
+          <button className="chip" onClick={onToggleFinished}>{book.finishedAt ? t('reader.finishedMarkUnfinished') : t('reader.markFinished')}</button>
           {canCompare && (
             <button className={`chip ${compare ? 'on' : ''}`} onClick={() => setCompare(v => !v)} title={t('reader.comparePdf')}>
               <IconColumns size={15} /> PDF
@@ -280,14 +305,14 @@ export function Reader({ book, loaded, settings, onChange, onProgress, onBack, o
           <button className="chip" onClick={() => {
             const order: ReaderSettings['theme'][] = ['night', 'sepia', 'paper'];
             onChange({ theme: order[(order.indexOf(settings.theme) + 1) % order.length] });
-          }}>{settings.theme}</button>
+          }} title={t('reader.themeHint', { theme: t(THEME_KEY[settings.theme]) })}>{t(THEME_KEY[settings.theme])}</button>
         </div>
 
         <div className="reader-body">
           <div className={`canvas theme-${settings.theme}`} style={{ ['--reader-fs' as string]: `${settings.fontSize}px` }}>
-            <div className="prose">
-              {paragraphs.map((para, pi) => <p key={pi} className="para">{para.map(renderSentence)}</p>)}
-            </div>
+            <BookNotes book={book} loaded={loaded} onJump={seek}>{render => <div className="prose">
+              {paragraphs.map((para, pi) => <p key={pi} className="para">{para.map(i => renderSentence(i, render))}</p>)}
+            </div>}</BookNotes>
           </div>
           {compare && canCompare && <PdfCompare filePath={book.filePath} onClose={() => setCompare(false)} />}
         </div>

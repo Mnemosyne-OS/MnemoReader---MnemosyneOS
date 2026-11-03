@@ -18,6 +18,10 @@ import { ocrDetail } from './lib/ocrLabel';
 import { ConfirmDelete } from './components/ConfirmDelete';
 import { IconBook } from './components/Icons';
 import { saveText, loadText, deleteText } from './lib/textStore';
+import { ReaderAgentActions } from './components/ReaderAgentActions';
+import { removeBookNotes } from './lib/notesVaultSync';
+import { useNotesVaultSync } from './hooks/useNotesVaultSync';
+import { NotesVaultNotice } from './components/NotesVaultNotice';
 
 /**
  * How a long import reports itself: the phase, plus the OCR page counter when
@@ -52,7 +56,8 @@ export default function App() {
   const [reloadNonce, setReloadNonce] = useState(0);
 
   // The app's own vault + one chronicle per book, entirely to the side of reading.
-  useSandboxCatalogue(books);
+  const sandboxVault = useSandboxCatalogue(books);
+  useNotesVaultSync(books, sandboxVault);
 
   const loadedCache = useRef<Map<string, LoadedBook>>(new Map());
   const toastId = useRef(0);
@@ -91,7 +96,8 @@ export default function App() {
 
   /** Load the built-in demo text so the reader + voice can be tried without the host. */
   const loadSample = useCallback(() => {
-    const id = `sample_${Date.now().toString(36)}`;
+    // Stable identity lets demo highlights survive reopening the same story.
+    const id = 'sample_lantern_keeper_v1';
     const { sentences, offsets } = splitSentences(SAMPLE_TEXT);
     const chapters = detectChapters(SAMPLE_TEXT, offsets);
     loadedCache.current.set(id, { bookId: id, text: SAMPLE_TEXT, sentences, sentenceOffsets: offsets });
@@ -274,10 +280,11 @@ export default function App() {
     setReloadNonce(n => n + 1); // remount the reader with the re-OCR'd text
   }, [notify, processInto, t]);
 
-  const openBook = useCallback(async (book: Book) => {
+  /** True once the book is in the reader (the agent door reports it, doc 149). */
+  const openBook = useCallback(async (book: Book): Promise<boolean> => {
     // A failed book: tapping it retries the import rather than dead-ending.
-    if (book.ingest === 'error') { notify('info', t('toast.retrying', { title: book.title })); await processInto(book.id, book.filePath, book.title); return; }
-    if (loadedCache.current.has(book.id)) { setReader(book.id); return; }
+    if (book.ingest === 'error') { notify('info', t('toast.retrying', { title: book.title })); await processInto(book.id, book.filePath, book.title); return false; }
+    if (loadedCache.current.has(book.id)) { setReader(book.id); return true; }
 
     // Durable cache first: a cached book opens instantly and stays readable even
     // when the source file has since been moved or deleted.
@@ -289,12 +296,12 @@ export default function App() {
         patchBook(book.id, { chapters: detectChapters(cachedText, offsets), sentenceCount: sentences.length });
       }
       setReader(book.id);
-      return;
+      return true;
     }
 
     // No cache (imported before the durable cache existed) → extract from the
     // source file, and backfill the cache so this book is durable from now on.
-    if (!isFramed()) { notify('err', t('toast.needHostOpen')); return; }
+    if (!isFramed()) { notify('err', t('toast.needHostOpen')); return false; }
     notify('info', t('toast.opening', { title: book.title }));
     try {
       const res = await bridge.extractDocument(book.filePath);
@@ -309,11 +316,13 @@ export default function App() {
         patchBook(book.id, { chapters, sentenceCount: sentences.length });
       }
       setReader(book.id);
+      return true;
     } catch (err) {
       const raw = err instanceof Error ? err.message : String(err);
       notify('err', /ENOENT/i.test(raw)
         ? t('toast.fileMoved', { title: book.title })
         : t('toast.openFailed', { title: book.title, error: raw }));
+      return false;
     }
   }, [notify, patchBook, processInto, t]);
 
@@ -322,6 +331,10 @@ export default function App() {
   const requestDelete = useCallback((book: Book) => { setConfirmDelete(book); }, []);
 
   const deleteBook = useCallback((book: Book) => {
+    try { removeBookNotes(book.id); } catch (err) {
+      console.warn('[MnemoReader] book notes could not be removed; the book is kept', book.id, err);
+      notify('err', t('toast.notesRemoveFailed')); return;
+    }
     setConfirmDelete(null);
     loadedCache.current.delete(book.id);
     void deleteText(book.id);                      // erase the durable local copy
@@ -335,6 +348,18 @@ export default function App() {
 
   return (
     <div className="app">
+      <ReaderAgentActions
+        books={books}
+        openId={activeBook && activeLoaded ? activeBook.id : null}
+        // An import sent to the background has no overlay but its book is still busy.
+        importing={(importJob !== null && importJob.phase !== 'error') || books.some((b) => b.ingest === 'extracting' || b.ingest === 'chaptering' || b.ingest === 'vectorizing')}
+        openBook={openBook}
+        closeBook={() => setReader(null)}
+        importUrl={addUrl}
+        settings={settings}
+        changeSettings={(patch) => setSettings(s => ({ ...s, ...patch }))}
+      />
+      <NotesVaultNotice />
       {activeBook && activeLoaded ? (
         <Reader
           key={`${activeBook.id}:${reloadNonce}`}
@@ -343,6 +368,8 @@ export default function App() {
           settings={settings}
           onChange={(patch) => setSettings(s => ({ ...s, ...patch }))}
           onProgress={(i) => { if (activeBook.progressSentence !== i) patchBook(activeBook.id, { progressSentence: i }); }}
+          onFinish={() => patchBook(activeBook.id, { finishedAt: activeBook.finishedAt ?? Date.now() })}
+          onToggleFinished={() => patchBook(activeBook.id, { finishedAt: activeBook.finishedAt ? undefined : Date.now() })}
           onBack={() => setReader(null)}
           onDeepOcr={() => deepOcr(activeBook)}
           notify={notify}
@@ -365,6 +392,7 @@ export default function App() {
             ocr={ocrByBook}
             onOpen={openBook}
             onDelete={requestDelete}
+            onToggleFinished={book => patchBook(book.id, { finishedAt: book.finishedAt ? undefined : Date.now() })}
             onAddFile={addFile}
             onAddFolder={addFolder}
             onAddUrl={addUrl}

@@ -17,6 +17,6 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src"],
-  "//": "Tests are typechecked by vitest itself; the app build must not depend on the test runner being installed.",
-  "exclude": ["src/**/*.test.ts"]
+  "//": "Tests and their helpers (src/test) are typechecked by vitest itself; the app build must not depend on the test runner being installed.",
+  "exclude": ["src/**/*.test.ts", "src/test/**"]
 }

@@ -22,6 +22,12 @@
   --amber-deep: #d8912a;
   --amber-glow: rgba(245, 182, 66, 0.35);
   --violet: #8b7bf0;
+  /* The colour of a highlight saved before colours existed (highlightColors.ts
+     DEFAULT_HIGHLIGHT); also the accent of the notes panel's links and focus. */
+  --highlight-yellow: #eed16a;
+  --err: #ffb0a3;
+  /* Saved, done: the house green (style-cartouche §2). */
+  --ok: #3fd68a;
 
   --radius: 18px;
   --radius-sm: 12px;
@@ -165,10 +171,10 @@ button { font-family: inherit; }
   position: relative;
   cursor: pointer;
   border-radius: var(--radius);
-  transition: transform 0.28s var(--ease-spring);
-  animation: rise 0.5s var(--ease-spring) both;
+  /* Keep card text on the normal rendering surface, including after entry. */
+  animation: cardReveal 0.3s ease backwards;
 }
-.card:hover { transform: translateY(-6px); }
+.card:hover .cover { border-color: var(--text-faint); }
 .cover {
   position: relative;
   aspect-ratio: 3 / 4.2;
@@ -185,8 +191,8 @@ button { font-family: inherit; }
   mix-blend-mode: overlay;
 }
 .cover-spine { position: absolute; left: 0; top: 0; bottom: 0; width: 8px; background: rgba(0, 0, 0, 0.28); }
-.cover-title { position: relative; font-size: 15px; font-weight: 700; line-height: 1.25; letter-spacing: -0.01em; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45); }
-.cover-author { position: relative; font-size: 11.5px; color: rgba(255, 255, 255, 0.72); margin-top: 4px; }
+.cover-title { position: relative; font-size: 16px; font-weight: 700; line-height: 1.3; letter-spacing: normal; color: var(--text); }
+.cover-author { position: relative; font-size: 13px; color: var(--text); margin-top: 5px; }
 .cover-glyph { position: absolute; top: 14px; left: 16px; opacity: 0.85; transition: opacity 0.16s; }
 .card:hover .cover-glyph { opacity: 0; }
 
@@ -554,6 +560,7 @@ button { font-family: inherit; }
 }
 
 /* ── animations ─────────────────────────────────────────────────────────── */
+@keyframes cardReveal { from { opacity: 0; } to { opacity: 1; } }
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes dockIn { from { opacity: 0; transform: translate(-50%, 16px); } to { opacity: 1; transform: translate(-50%, 0); } }
 @keyframes popIn { from { opacity: 0; transform: translateY(6px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
@@ -570,3 +577,76 @@ button { font-family: inherit; }
   .rail { display: none; }
   .dock { width: calc(100% - 32px); }
 }
+
+/* Saved annotations are independent of the moving voice highlight. */
+.book-highlight { background: var(--highlight-yellow); color: var(--ink-900); border-radius: 2px; }
+.book-highlight .kw { outline: 2px solid currentColor; }
+.book-notes-tools { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 auto 20px; padding: 8px; max-width: 760px; font-size: 13px; background: var(--ink-700); color: var(--text); border-radius: 10px; }
+.selection-note, .book-note-entry { padding: 16px; margin: 12px 0; border: 1px solid var(--stroke-soft); border-radius: 12px; }
+.selection-note { position: fixed; z-index: 90; left: 50%; transform: translateX(-50%); bottom: 150px; width: min(520px, calc(100vw - 32px)); max-height: 55vh; overflow-y: auto; box-sizing: border-box; background: var(--ink-700); color: var(--text); box-shadow: var(--shadow); }
+.selection-note blockquote { max-height: 120px; overflow: auto; }
+.selection-note label, .book-note-entry label { display: block; font-size: 14px; }
+.selection-note textarea, .book-note-entry textarea { display: block; width: 100%; box-sizing: border-box; min-height: 80px; margin: 8px 0 12px; padding: 10px; color: inherit; background: transparent; border: 1px solid currentColor; border-radius: 8px; font: inherit; }
+.book-notes-panel { position: fixed; z-index: 80; right: 16px; top: 72px; bottom: 120px; width: min(440px, calc(100vw - 32px)); box-sizing: border-box; overflow-y: auto; background: var(--ink-700); color: var(--text); border: 1px solid var(--stroke); border-radius: 16px; padding: 20px; box-shadow: var(--shadow); font-size: 14px; }
+.book-notes-heading { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+.book-notes-heading h2 { margin: 0; font-size: 18px; }
+.book-note-entry blockquote, .selection-note blockquote { margin: 10px 0; padding-left: 12px; border-left: 3px solid var(--highlight-yellow); white-space: pre-wrap; overflow-wrap: anywhere; }
+.note-location { background: transparent; border: none; color: var(--highlight-yellow); text-align: left; cursor: pointer; text-decoration: underline; font: inherit; }
+.note-location:disabled { color: var(--text-dim); cursor: default; }
+.note-comment { white-space: pre-wrap; overflow-wrap: anywhere; }
+.notes-error { color: var(--err); font-size: 14px; }
+.notes-saved { display: flex; align-items: center; gap: 6px; color: var(--ok); }
+.highlight-colors { margin: 12px 0; border: 1px solid var(--stroke-soft); border-radius: 8px; padding: 12px; min-width: 0; }
+.highlight-swatches { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 12px; }
+.highlight-swatches button { position: relative; width: 34px; height: 34px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; font-weight: 700; }
+.highlight-swatches button[aria-pressed="true"] { outline: 2px solid var(--text); outline-offset: 2px; }
+.highlight-swatches button:focus-visible { outline: 3px solid var(--text); outline-offset: 3px; }
+.swatch-name { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.highlight-colors label { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.highlight-colors input { width: 105px; padding: 8px; border: 1px solid var(--stroke); border-radius: 6px; background: transparent; color: inherit; font: inherit; }
+.highlight-color-preview { display: inline-block; margin-top: 10px; padding: 4px 8px; border-radius: 3px; }
+.book-highlight .kw, .canvas.theme-paper .book-highlight .kw { color: inherit !important; background: transparent; }
+.book-color-key { display: grid; gap: 10px; }
+.book-note-entry .color-key-row { display: grid; grid-template-columns: 24px minmax(56px, auto) minmax(0, 1fr); align-items: center; gap: 10px; }
+.color-key-swatch { width: 24px; height: 24px; border-radius: 5px; border: 1px solid var(--stroke); }
+.color-key-name { font-size: 12px; overflow-wrap: anywhere; }
+.color-key-row input { width: 100%; box-sizing: border-box; min-width: 0; padding: 8px; background: transparent; color: inherit; border: 1px solid var(--stroke); border-radius: 6px; font: inherit; }
+.color-key-row input::placeholder { color: var(--text-dim); }
+.highlight-label { display: inline-block; margin-left: 10px; overflow-wrap: anywhere; }
+.color-key-toggle > summary { cursor: pointer; font-weight: 600; padding: 2px 0; }
+.color-key-toggle > summary:focus-visible { outline: 2px solid var(--highlight-yellow); outline-offset: 4px; border-radius: 3px; }
+.color-key-toggle > summary span { font-size: 12px; font-weight: 400; }
+.book-notes-panel.floating-notes { right: auto; bottom: auto; height: min(680px, calc(100dvh - 16px)); width: min(440px, calc(100vw - 16px)); padding: 0; display: flex; flex-direction: column; overflow: hidden; }
+.floating-notes-heading { flex-shrink: 0; align-items: center; padding: 14px; border-bottom: 1px solid var(--stroke); }
+.notes-drag-handle { flex: 1; min-width: 0; border: 0; background: transparent; color: inherit; font: inherit; font-size: 16px; font-weight: 600; text-align: left; cursor: grab; touch-action: none; user-select: none; padding: 6px; border-radius: 6px; overflow-wrap: anywhere; }
+.notes-drag-handle:active { cursor: grabbing; }
+.notes-drag-handle:focus-visible { outline: 2px solid var(--highlight-yellow); }
+.floating-notes-content { min-height: 0; flex: 1; overflow-y: auto; padding: 0 20px 20px; }
+.book-highlight[role="button"] { cursor: pointer; }
+.book-highlight[role="button"]:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.book-note-entry.targeted-note { border-color: var(--highlight-yellow); box-shadow: 0 0 0 1px var(--highlight-yellow); }
+.notes-chapter { margin: 12px 0; border: 1px solid var(--stroke-soft); border-radius: 10px; padding: 12px; }
+.notes-chapter > summary { cursor: pointer; font-weight: 600; overflow-wrap: anywhere; }
+.notes-chapter > summary span { font-weight: 400; font-size: 12px; }
+.notes-chapter > summary:focus-visible { outline: 2px solid var(--highlight-yellow); outline-offset: 4px; }
+.book-notes-panel.floating-notes { max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); padding-bottom: 22px; }
+.notes-resize-handle { position: absolute; right: 2px; bottom: 2px; width: 28px; height: 24px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--text-dim); font-size: 19px; cursor: nwse-resize; touch-action: none; user-select: none; }
+.notes-resize-handle:focus-visible { outline: 2px solid var(--highlight-yellow); outline-offset: -2px; }
+.book-note-entry .color-key-row { grid-template-columns: 24px 58px minmax(0, 1fr) 30px; gap: 8px; }
+.color-key-row > button { padding: 4px; min-width: 28px; font-size: 18px; }
+.color-key-add { margin-top: 12px; display: flex; gap: 8px; align-items: end; flex-wrap: wrap; }
+.color-key-add label { flex: 1; min-width: 120px; font-size: 12px; }
+.color-key-add input, .color-key-add select { display: block; margin-top: 6px; width: 100%; box-sizing: border-box; padding: 8px; background: var(--ink-700); color: var(--text); border: 1px solid var(--stroke); border-radius: 6px; font: inherit; }
+.vault-sync-notice { padding: 10px 16px; display: flex; gap: 12px; align-items: center; background: color-mix(in srgb, var(--amber) 18%, var(--ink-800)); color: var(--text); font-size: 13px; flex-wrap: wrap; z-index: 90; }
+.book-progress-label { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
+.book-completion-toggle { display: block; margin: 0 12px 12px; padding: 6px 8px; border: 1px solid var(--stroke-soft); border-radius: 6px; background: transparent; color: var(--text-dim); font: inherit; font-size: 12px; cursor: pointer; }
+.book-completion-toggle:disabled { opacity: .5; cursor: default; }
+.library-view-filter { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--text-dim); }
+.library-view-filter select { padding: 8px; border: 1px solid var(--stroke-soft); border-radius: 8px; background: var(--ink-800); color: var(--text); font: inherit; }
+.book-search-panel { position: fixed; z-index: 95; top: 80px; left: 50%; transform: translateX(-50%); width: min(540px, calc(100vw - 24px)); max-height: calc(100dvh - 180px); overflow-y: auto; padding: 18px; box-sizing: border-box; border: 1px solid var(--stroke); border-radius: 14px; background: var(--ink-700); color: var(--text); box-shadow: var(--shadow); }
+.book-search-heading { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.book-search-panel label { display: block; margin-top: 12px; }
+.book-search-panel input, .book-search-panel select { display: block; width: 100%; box-sizing: border-box; margin-top: 6px; padding: 10px; border: 1px solid var(--stroke); border-radius: 8px; color: inherit; background: var(--ink-700); font: inherit; }
+.book-search-result { display: block; width: 100%; text-align: left; padding: 12px; margin: 8px 0; border: 1px solid var(--stroke); border-radius: 8px; background: transparent; color: inherit; cursor: pointer; }
+.book-search-result strong, .book-search-result span { display: block; overflow-wrap: anywhere; }
+.book-search-result span { margin-top: 6px; white-space: pre-wrap; }

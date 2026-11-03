@@ -18,7 +18,14 @@
     "dropTitle": "把书拖到这里",
     "dropSub": "EPUB、PDF、DOCX、TXT… —— 或从磁盘中选择",
     "dropNoPath": "此窗口看不到拖入的文件在磁盘上的位置。请用 + 按钮选择它。",
-    "sample": "用示例故事试试"
+    "sample": "用示例故事试试",
+    "showFilter": "显示",
+    "viewAll": "全部书籍，已读完的排在最后",
+    "viewActive": "未读完的书",
+    "viewFinished": "已读完的书",
+    "noMatch": "此视图中没有书籍。请尝试其他筛选或搜索。",
+    "countOne": "{{n}} 本书",
+    "countMany": "{{n}} 本书"
   },
   "card": {
     "rightClick": "右键点击以移除",
@@ -31,7 +38,11 @@
     "failedRetry": "失败 · 点击重试",
     "chapters": "{{n}} 章",
     "noChapters": "—",
-    "ocrQueued": "等待中 · 前面 {{n}} 个"
+    "ocrQueued": "等待中 · 前面 {{n}} 个",
+    "finished": "✓ 已读完",
+    "percentComplete": "已读 {{pct}}%",
+    "markFinished": "标记为已读完",
+    "markUnfinished": "标记为未读完"
   },
   "import": {
     "close": "关闭",
@@ -51,7 +62,9 @@
     "line2": "• 磁盘上的原始文件绝不会被改动。",
     "line3": "• 你归档进 Mnemosyne 保险库的内容仍留在你的记忆中 —— 那由宿主端管理，而不是这里。",
     "cancel": "取消",
-    "remove": "移除书籍"
+    "remove": "移除书籍",
+    "line4": "同时会从 MnemoReader 中删除本书已保存的高亮和评论。",
+    "line5": "已同步的笔记副本也会从 MnemoReader 保险库中删除。如果宿主不可用，删除会等到卡带能再次同步时进行。已归档的书籍正文保留在书库保险库中。"
   },
   "pdf": {
     "original": "原始 PDF",
@@ -70,7 +83,13 @@
     "deepOcrTitle": "对每一页重新做一次真正的 OCR（较慢，质量优于内嵌文本层）",
     "smaller": "A−",
     "larger": "A+",
-    "preparingVoice": "正在准备语音…"
+    "preparingVoice": "正在准备语音…",
+    "markFinished": "标记为已读完",
+    "finishedMarkUnfinished": "✓ 已读完，标记为未读完",
+    "themeNight": "夜间",
+    "themeSepia": "复古",
+    "themePaper": "纸张",
+    "themeHint": "阅读主题：{{theme}}。点击切换到下一个。"
   },
   "dock": {
     "ready": "就绪",
@@ -138,11 +157,122 @@
     "noVoiceForLanguageUnknown": "没有{{language}}语音 —— 这本书将用已设置的语音朗读。",
     "dismiss": "关闭",
     "dismissAll": "全部关闭（{{n}}）",
-    "importedBackground": "「{{title}}」已就绪"
+    "importedBackground": "「{{title}}」已就绪",
+    "notesRemoveFailed": "无法删除本书的笔记。请重试。"
   },
   "language": {
     "fr": "法语",
     "es": "西班牙语",
     "en": "英语"
+  },
+  "notes": {
+    "toggle": "书籍笔记（{{n}}）",
+    "hint": "选中文字即可高亮或添加评论。",
+    "readError": "无法读取已保存的笔记。请重新打开本书重试；现有笔记未被覆盖。",
+    "saveError": "无法保存此更改。存储空间可能已满或不可用。请重试。",
+    "generalSaveError": "无法保存总体笔记。请保持本书打开，然后再次点击“保存笔记”。",
+    "labelsSaveError": "无法保存颜色标签。请保持本书打开，然后再次点击“保存颜色图例”。",
+    "openHighlight": "打开高亮段落的笔记",
+    "openHighlightTitle": "在书籍笔记中打开此高亮",
+    "selectionLabel": "高亮所选段落",
+    "commentOptional": "评论（可选）",
+    "saveHighlight": "保存高亮",
+    "cancel": "取消",
+    "intro": "已保存在本设备的 MnemoReader 中。每条高亮都会成为本书连续笔记中的一个条目。",
+    "vaultStandalone": "在 Mnemosyne OS 中打开，即可将笔记同步到其保险库。",
+    "vaultDemo": "演示笔记仅保存在本地。",
+    "vaultWaiting": "本地笔记正在等待连接 MnemoReader 保险库。",
+    "retryVault": "重试保险库同步",
+    "highlightsHeading": "高亮和评论",
+    "noHighlights": "还没有高亮。在书中选择一段文字即可开始。",
+    "otherPassages": "其他已保存段落",
+    "returnToPassage": "回到段落",
+    "general": "总体笔记",
+    "generalPlaceholder": "无需选择段落，写下对本书的想法。",
+    "savedLocal": "已保存在本设备。",
+    "unsaved": "有未保存的更改。请再次尝试保存。",
+    "saveNotes": "保存笔记",
+    "quoteMoved": "书籍正文已更改。此引文已保留，但其位置需要核对。",
+    "comment": "评论",
+    "saveChanges": "保存更改",
+    "editHighlight": "编辑高亮",
+    "removeHighlight": "删除高亮",
+    "panelLabel": "《{{title}}》的笔记",
+    "panelHeading": "{{title}} · 笔记",
+    "move": "移动书籍笔记",
+    "moveHint": "拖动即可移动。获得焦点时可用方向键；Home 键恢复位置。",
+    "close": "关闭笔记",
+    "resize": "调整书籍笔记大小",
+    "resizeHint": "拖动调整大小，或获得焦点后使用方向键。"
+  },
+  "colorKey": {
+    "title": "颜色图例",
+    "unsavedShort": "有未保存的更改",
+    "intro": "为本书的每种颜色赋予自己的含义。标签初始为空。",
+    "labelAria": "{{name}} 的颜色标签",
+    "labelPlaceholder": "自定义标签",
+    "removeAria": "从颜色图例中移除{{name}}",
+    "removeTitle": "从颜色图例中移除",
+    "empty": "颜色图例为空。需要时可在下方添加颜色。",
+    "removeNote": "移除颜色不会影响现有高亮及其已保存的标签。",
+    "restoreLabel": "重新添加已移除的颜色",
+    "choose": "选择颜色",
+    "addColor": "添加颜色",
+    "customHex": "自定义颜色（十六进制）",
+    "addCustom": "添加自定义颜色",
+    "hexInvalid": "请输入 3 位或 6 位十六进制颜色。",
+    "unsaved": "颜色标签有未保存的更改。",
+    "saved": "颜色标签已保存在本设备。",
+    "save": "保存颜色图例"
+  },
+  "colorPicker": {
+    "legend": "高亮颜色",
+    "swatchAria": "{{name}}高亮",
+    "swatchAriaLabelled": "{{name}}高亮：{{label}}",
+    "hex": "十六进制颜色",
+    "hexInvalid": "请输入 3 位或 6 位十六进制颜色，例如 #ABC 或 #AABBCC。",
+    "preview": "高亮预览"
+  },
+  "color": {
+    "red": "红色",
+    "orange": "橙色",
+    "yellow": "黄色",
+    "green": "绿色",
+    "blue": "蓝色",
+    "indigo": "靛蓝",
+    "violet": "紫色"
+  },
+  "search": {
+    "open": "搜索书籍和笔记",
+    "panel": "搜索本书及其笔记",
+    "heading": "搜索 · {{title}}",
+    "close": "关闭搜索",
+    "query": "词语、短语或颜色标签",
+    "placeholder": "搜索本书和你的笔记",
+    "scope": "搜索范围",
+    "scopeAll": "书籍和笔记",
+    "scopeBook": "书籍正文",
+    "scopeNotes": "我的笔记和主题标签",
+    "help": "匹配词语和短语，包括你的颜色标签。只搜索当前打开的书；按含义的更广泛搜索由 AI 记忆负责。",
+    "countOne": "找到 1 个段落或笔记",
+    "countMany": "找到 {{n}} 个段落或笔记",
+    "none": "没有结果。请尝试其他词语或颜色标签。",
+    "more": "显示更多结果",
+    "resultNote": "笔记 · {{chapter}}",
+    "resultPassage": "段落 · {{chapter}}"
+  },
+  "vault": {
+    "pending": "笔记已保存在本地；等待同步到保险库。",
+    "syncing": "正在将笔记同步到 MnemoReader 保险库…",
+    "synced": "笔记已保存在 MnemoReader 保险库中。AI 记忆遵循保险库的权限。",
+    "cleared": "没有需要同步的笔记。以前的笔记副本已从保险库中删除。",
+    "failed": "保险库同步需要处理：{{error}} 本地笔记已保留。",
+    "failedPending": "有笔记或笔记删除待同步；保险库同步失败：{{error}}",
+    "notice": "部分书籍笔记或笔记删除尚未同步到保险库。AI 记忆中可能仍有旧内容。本地笔记已保留。",
+    "retryNotes": "重试笔记同步"
+  },
+  "tile": {
+    "books": "书籍",
+    "annotated": "有笔记"
   }
 }

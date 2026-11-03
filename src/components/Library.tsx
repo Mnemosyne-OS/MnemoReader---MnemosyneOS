@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useI18n } from '../i18n/useI18n';
 import type { Book } from '../lib/types';
 import { BookCard } from './BookCard';
+import { useLocalStorage } from '../lib/useLocalStorage';
 import type { OcrProgress } from '../lib/bridge';
 import { IconBook, IconFolder, IconPlus, IconSparkle, IconLink } from './Icons';
 
@@ -11,6 +12,7 @@ interface LibraryProps {
   ocr?: Record<string, OcrProgress>;
   onOpen: (b: Book) => void;
   onDelete: (b: Book) => void;
+  onToggleFinished: (b: Book) => void;
   onAddFile: () => void;
   onAddFolder: () => void;
   onAddUrl: (url: string) => void;
@@ -39,21 +41,23 @@ function LinkBar({ onAddUrl, autoFocus }: { onAddUrl: (url: string) => void; aut
   );
 }
 
-export function Library({ books, ocr, onOpen, onDelete, onAddFile, onAddFolder, onAddUrl, onSample, onDropPaths }: LibraryProps) {
+export function Library({ books, ocr, onOpen, onDelete, onToggleFinished, onAddFile, onAddFolder, onAddUrl, onSample, onDropPaths }: LibraryProps) {
   const { t } = useI18n();
   const [q, setQ] = useState('');
   const [drag, setDrag] = useState(false);
   // A drop that carried files but no path: said out loud, never a silent no-op.
   const [dropNoPath, setDropNoPath] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
+  const [view, setView] = useLocalStorage<'all' | 'active' | 'finished'>('libraryView', 'all');
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     const list = needle
       ? books.filter(b => b.title.toLowerCase().includes(needle) || (b.author ?? '').toLowerCase().includes(needle))
       : books;
-    return [...list].sort((a, b) => b.addedAt - a.addedAt);
-  }, [books, q]);
+    return list.filter(b => view === 'active' ? !b.finishedAt : view === 'finished' ? !!b.finishedAt : true)
+      .sort((a, b) => Number(!!a.finishedAt) - Number(!!b.finishedAt) || b.addedAt - a.addedAt);
+  }, [books, q, view]);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -79,9 +83,7 @@ export function Library({ books, ocr, onOpen, onDelete, onAddFile, onAddFolder, 
             <div className="empty-orb"><IconBook size={38} /></div>
             <h2 style={{ fontSize: 24, margin: '0 0 8px', letterSpacing: '-0.02em' }}>{t('library.emptyTitle')}</h2>
             <p style={{ color: 'var(--text-faint)', margin: '0 0 24px', lineHeight: 1.6 }}>
-              Add a book in any format — EPUB, PDF, DOCX, RTF, TXT, HTML, Markdown — and MnemoReader
-              will read it aloud, extracting the text, finding chapters, and vectorizing it into your
-              Library vault. Most formats (EPUB, DOCX, TXT, HTML…) need no OCR.
+              {t('library.emptyBody')}
             </p>
             <div
               className={`dropzone ${drag ? 'drag' : ''}`}
@@ -121,9 +123,16 @@ export function Library({ books, ocr, onOpen, onDelete, onAddFile, onAddFolder, 
       <div className="library-head">
         <div>
           <div className="library-title">{t('library.title')}</div>
-          <div className="library-count">{books.length} book{books.length !== 1 ? 's' : ''}</div>
+          <div className="library-count">{t(books.length === 1 ? 'library.countOne' : 'library.countMany', { n: books.length })}</div>
         </div>
         <div className="library-actions">
+          <label className="library-view-filter">{t('library.showFilter')}
+            <select value={view} onChange={e => setView(e.target.value as 'all' | 'active' | 'finished')}>
+              <option value="all">{t('library.viewAll')}</option>
+              <option value="active">{t('library.viewActive')}</option>
+              <option value="finished">{t('library.viewFinished')}</option>
+            </select>
+          </label>
           <div className="search">
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('library.search')} />
           </div>
@@ -137,9 +146,10 @@ export function Library({ books, ocr, onOpen, onDelete, onAddFile, onAddFolder, 
 
       <div className="grid">
         {filtered.map((b, i) => (
-          <BookCard key={b.id} book={b} index={i} ocr={ocr?.[b.id]} onOpen={onOpen} onDelete={onDelete} />
+          <BookCard key={b.id} book={b} index={i} ocr={ocr?.[b.id]} onOpen={onOpen} onDelete={onDelete} onToggleFinished={onToggleFinished} />
         ))}
       </div>
+      {!filtered.length && <p role="status">{t('library.noMatch')}</p>}
     </div>
   );
 }

@@ -18,7 +18,14 @@
     "dropTitle": "Largue um livro aqui",
     "dropSub": "EPUB, PDF, DOCX, TXT… — ou escolha um do disco",
     "dropNoPath": "Esta janela não vê onde um arquivo arrastado está no seu disco. Escolha-o com o botão +.",
-    "sample": "Experimente com uma história de exemplo"
+    "sample": "Experimente com uma história de exemplo",
+    "showFilter": "Mostrar",
+    "viewAll": "Todos os livros, terminados no fim",
+    "viewActive": "Livros por terminar",
+    "viewFinished": "Livros terminados",
+    "noMatch": "Nenhum livro corresponde a esta vista. Experimente outro filtro ou outra pesquisa.",
+    "countOne": "{{n}} livro",
+    "countMany": "{{n}} livros"
   },
   "card": {
     "rightClick": "Clique com o botão direito para remover",
@@ -31,7 +38,11 @@
     "failedRetry": "Falhou · toque para tentar de novo",
     "chapters": "{{n}} capítulos",
     "noChapters": "—",
-    "ocrQueued": "em espera · {{n}} à frente"
+    "ocrQueued": "em espera · {{n}} à frente",
+    "finished": "✓ Terminado",
+    "percentComplete": "{{pct}}% lido",
+    "markFinished": "Marcar como terminado",
+    "markUnfinished": "Marcar como não terminado"
   },
   "import": {
     "close": "Fechar",
@@ -51,7 +62,9 @@
     "line2": "• O ficheiro original no disco nunca é tocado.",
     "line3": "• O que arquivou no seu cofre Mnemosyne permanece na sua memória — isso governa-se a partir do anfitrião, não daqui.",
     "cancel": "Cancelar",
-    "remove": "Remover o livro"
+    "remove": "Remover o livro",
+    "line4": "Também remove do MnemoReader os destaques e comentários guardados deste livro.",
+    "line5": "As cópias sincronizadas das notas também serão removidas do cofre MnemoReader. Se o anfitrião não estiver disponível, essa remoção aguarda até o cartucho poder sincronizar de novo. O texto do livro já arquivado fica no cofre Biblioteca."
   },
   "pdf": {
     "original": "PDF original",
@@ -70,7 +83,13 @@
     "deepOcrTitle": "Refazer um OCR verdadeiro de cada página (lento, melhor qualidade do que uma camada de texto incorporada)",
     "smaller": "A−",
     "larger": "A+",
-    "preparingVoice": "A preparar a voz…"
+    "preparingVoice": "A preparar a voz…",
+    "markFinished": "Marcar como terminado",
+    "finishedMarkUnfinished": "✓ Terminado, marcar como não terminado",
+    "themeNight": "Noite",
+    "themeSepia": "Sépia",
+    "themePaper": "Papel",
+    "themeHint": "Tema de leitura: {{theme}}. Clique para o seguinte."
   },
   "dock": {
     "ready": "Pronto",
@@ -138,11 +157,122 @@
     "noVoiceForLanguageUnknown": "Não há nenhuma voz em {{language}} — este livro será lido com a voz configurada.",
     "dismiss": "Fechar",
     "dismissAll": "Fechar tudo ({{n}})",
-    "importedBackground": "«{{title}}» está pronto"
+    "importedBackground": "«{{title}}» está pronto",
+    "notesRemoveFailed": "Não foi possível remover as notas do livro. Tente novamente."
   },
   "language": {
     "fr": "francês",
     "es": "espanhol",
     "en": "inglês"
+  },
+  "notes": {
+    "toggle": "Notas do livro ({{n}})",
+    "hint": "Selecione texto para destacar ou comentar.",
+    "readError": "Não foi possível ler as notas guardadas. Reabra este livro para tentar de novo; as notas existentes não foram substituídas.",
+    "saveError": "Não foi possível guardar a alteração. O armazenamento pode estar cheio ou indisponível. Tente novamente.",
+    "generalSaveError": "Não foi possível guardar as notas gerais. Mantenha este livro aberto e volte a carregar em Guardar notas.",
+    "labelsSaveError": "Não foi possível guardar as etiquetas de cor. Mantenha este livro aberto e volte a carregar em Guardar legenda.",
+    "openHighlight": "Abrir a nota da passagem destacada",
+    "openHighlightTitle": "Abrir este destaque nas notas do livro",
+    "selectionLabel": "Destacar a passagem selecionada",
+    "commentOptional": "Comentário (opcional)",
+    "saveHighlight": "Guardar destaque",
+    "cancel": "Cancelar",
+    "intro": "Guardado neste dispositivo no MnemoReader. Cada destaque torna-se uma entrada na nota contínua deste livro.",
+    "vaultStandalone": "Abra no Mnemosyne OS para sincronizar as notas com o seu cofre.",
+    "vaultDemo": "As notas de demonstração ficam locais.",
+    "vaultWaiting": "As notas locais aguardam a ligação ao cofre MnemoReader.",
+    "retryVault": "Tentar sincronizar de novo",
+    "highlightsHeading": "Destaques e comentários",
+    "noHighlights": "Ainda sem destaques. Selecione uma passagem do livro para começar.",
+    "otherPassages": "Outras passagens guardadas",
+    "returnToPassage": "Voltar à passagem",
+    "general": "Notas gerais",
+    "generalPlaceholder": "Escreva ideias sobre este livro sem selecionar uma passagem.",
+    "savedLocal": "Guardado neste dispositivo.",
+    "unsaved": "Alterações por guardar. Tente guardar de novo.",
+    "saveNotes": "Guardar notas",
+    "quoteMoved": "O texto do livro mudou. Esta citação foi mantida, mas a sua posição precisa de revisão.",
+    "comment": "Comentário",
+    "saveChanges": "Guardar alterações",
+    "editHighlight": "Editar destaque",
+    "removeHighlight": "Remover destaque",
+    "panelLabel": "Notas de {{title}}",
+    "panelHeading": "{{title}} · Notas",
+    "move": "Mover as notas do livro",
+    "moveHint": "Arraste para mover. Com o foco, use as setas; Home repõe a posição.",
+    "close": "Fechar notas",
+    "resize": "Redimensionar as notas do livro",
+    "resizeHint": "Arraste para redimensionar, ou use as setas com o foco."
+  },
+  "colorKey": {
+    "title": "Legenda de cores",
+    "unsavedShort": "alterações por guardar",
+    "intro": "Dê a cada cor o seu próprio significado para este livro. As etiquetas começam vazias.",
+    "labelAria": "Etiqueta da cor {{name}}",
+    "labelPlaceholder": "A sua etiqueta",
+    "removeAria": "Remover {{name}} da legenda",
+    "removeTitle": "Remover da legenda",
+    "empty": "A legenda de cores está vazia. Adicione uma cor abaixo quando precisar.",
+    "removeNote": "Remover uma cor mantém os destaques existentes e a etiqueta guardada.",
+    "restoreLabel": "Adicionar uma cor removida",
+    "choose": "Escolher uma cor",
+    "addColor": "Adicionar cor",
+    "customHex": "Cor personalizada (hex)",
+    "addCustom": "Adicionar cor personalizada",
+    "hexInvalid": "Introduza uma cor hexadecimal de 3 ou 6 dígitos.",
+    "unsaved": "As etiquetas de cor têm alterações por guardar.",
+    "saved": "Etiquetas de cor guardadas neste dispositivo.",
+    "save": "Guardar legenda"
+  },
+  "colorPicker": {
+    "legend": "Cor do destaque",
+    "swatchAria": "Destaque {{name}}",
+    "swatchAriaLabelled": "Destaque {{name}}: {{label}}",
+    "hex": "Cor hex",
+    "hexInvalid": "Introduza uma cor hexadecimal de 3 ou 6 dígitos, como #ABC ou #AABBCC.",
+    "preview": "Pré-visualização do destaque"
+  },
+  "color": {
+    "red": "Vermelho",
+    "orange": "Laranja",
+    "yellow": "Amarelo",
+    "green": "Verde",
+    "blue": "Azul",
+    "indigo": "Índigo",
+    "violet": "Violeta"
+  },
+  "search": {
+    "open": "Pesquisar livro e notas",
+    "panel": "Pesquisar neste livro e nas notas",
+    "heading": "Pesquisa · {{title}}",
+    "close": "Fechar pesquisa",
+    "query": "Palavras, frase ou etiqueta de cor",
+    "placeholder": "Pesquisar neste livro e nas suas notas",
+    "scope": "Pesquisar em",
+    "scopeAll": "Livro e notas",
+    "scopeBook": "Texto do livro",
+    "scopeNotes": "As minhas notas e etiquetas de tema",
+    "help": "Encontra palavras e frases, incluindo as etiquetas de cor. Pesquisa apenas o livro aberto; a memória IA trata de pesquisas mais amplas pelo significado.",
+    "countOne": "1 passagem ou nota encontrada",
+    "countMany": "{{n}} passagens ou notas encontradas",
+    "none": "Sem resultados. Experimente outra palavra ou uma das etiquetas de cor.",
+    "more": "Mostrar mais resultados",
+    "resultNote": "Nota · {{chapter}}",
+    "resultPassage": "Passagem · {{chapter}}"
+  },
+  "vault": {
+    "pending": "Notas guardadas localmente; sincronização com o cofre pendente.",
+    "syncing": "A sincronizar notas com o cofre MnemoReader…",
+    "synced": "Notas guardadas no cofre MnemoReader. A memória IA segue as permissões do cofre.",
+    "cleared": "Sem notas para sincronizar. As cópias anteriores foram removidas do cofre.",
+    "failed": "A sincronização com o cofre precisa de atenção: {{error}} As notas locais são mantidas.",
+    "failedPending": "Há notas ou remoções de notas pendentes; a sincronização com o cofre falhou: {{error}}",
+    "notice": "Algumas notas ou remoções de notas não foram sincronizadas com o cofre. A memória IA pode ainda ter detalhes antigos. As notas locais são mantidas.",
+    "retryNotes": "Tentar sincronizar notas de novo"
+  },
+  "tile": {
+    "books": "Livros",
+    "annotated": "Anotados"
   }
 }

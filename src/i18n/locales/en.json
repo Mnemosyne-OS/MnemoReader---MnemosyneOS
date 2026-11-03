@@ -18,7 +18,14 @@
     "dropTitle": "Drop a book here",
     "dropSub": "EPUB, PDF, DOCX, TXT… — or pick one from disk",
     "dropNoPath": "This window cannot see where a dropped file is on your disk. Pick it with the + button.",
-    "sample": "Try it with a sample story"
+    "sample": "Try it with a sample story",
+    "showFilter": "Show",
+    "viewAll": "All books, finished last",
+    "viewActive": "Unfinished books",
+    "viewFinished": "Finished books",
+    "noMatch": "No books match this view. Try another filter or search.",
+    "countOne": "{{n}} book",
+    "countMany": "{{n}} books"
   },
   "card": {
     "rightClick": "Right-click to remove",
@@ -31,7 +38,11 @@
     "failedRetry": "Failed · tap to retry",
     "chapters": "{{n}} chapters",
     "noChapters": "—",
-    "ocrQueued": "waiting · {{n}} ahead"
+    "ocrQueued": "waiting · {{n}} ahead",
+    "finished": "✓ Finished",
+    "percentComplete": "{{pct}}% complete",
+    "markFinished": "Mark finished",
+    "markUnfinished": "Mark unfinished"
   },
   "import": {
     "close": "Close",
@@ -51,7 +62,9 @@
     "line2": "• The original file on disk is never touched.",
     "line3": "• What you archived into your Mnemosyne vault stays in your memory — you govern that from the host, not from here.",
     "cancel": "Cancel",
-    "remove": "Remove book"
+    "remove": "Remove book",
+    "line4": "This also removes this book’s saved highlights and comments from MnemoReader.",
+    "line5": "Its synced note copies will also be removed from the MnemoReader vault. If the host is unavailable, that removal waits until the cartridge can sync again. Previously archived book text stays in the Library vault."
   },
   "pdf": {
     "original": "Original PDF",
@@ -70,7 +83,13 @@
     "deepOcrTitle": "Re-OCR every page properly (slow, higher quality than an embedded text layer)",
     "smaller": "A−",
     "larger": "A+",
-    "preparingVoice": "Preparing the voice…"
+    "preparingVoice": "Preparing the voice…",
+    "markFinished": "Mark finished",
+    "finishedMarkUnfinished": "✓ Finished, mark unfinished",
+    "themeNight": "Night",
+    "themeSepia": "Sepia",
+    "themePaper": "Paper",
+    "themeHint": "Reading theme: {{theme}}. Click for the next one."
   },
   "dock": {
     "ready": "Ready",
@@ -138,11 +157,122 @@
     "noVoiceForLanguageUnknown": "No {{language}} voice is available — this book will be read with the configured voice.",
     "dismiss": "Dismiss",
     "dismissAll": "Dismiss all ({{n}})",
-    "importedBackground": "“{{title}}” is ready"
+    "importedBackground": "“{{title}}” is ready",
+    "notesRemoveFailed": "Book notes could not be removed. Please try again."
   },
   "language": {
     "fr": "French",
     "es": "Spanish",
     "en": "English"
+  },
+  "notes": {
+    "toggle": "Book notes ({{n}})",
+    "hint": "Select text to highlight or add a comment.",
+    "readError": "Saved notes could not be read. Reopen this book to retry; existing notes have not been overwritten.",
+    "saveError": "Your change could not be saved. Storage may be full or unavailable. Please try again.",
+    "generalSaveError": "Your general notes could not be saved. Keep this book open and try Save notes again.",
+    "labelsSaveError": "Your color labels could not be saved. Keep this book open and try Save color key again.",
+    "openHighlight": "Open note for highlighted passage",
+    "openHighlightTitle": "Open this highlight in Book notes",
+    "selectionLabel": "Highlight selected passage",
+    "commentOptional": "Comment (optional)",
+    "saveHighlight": "Save highlight",
+    "cancel": "Cancel",
+    "intro": "Saved on this device in MnemoReader. Each highlight becomes an entry in this book’s running note.",
+    "vaultStandalone": "Open inside Mnemosyne OS to sync notes to its vault.",
+    "vaultDemo": "Demo notes stay local.",
+    "vaultWaiting": "Local notes are waiting for the MnemoReader vault connection.",
+    "retryVault": "Retry vault sync",
+    "highlightsHeading": "Highlights and comments",
+    "noHighlights": "No highlights yet. Select a passage in the book to start.",
+    "otherPassages": "Other saved passages",
+    "returnToPassage": "Return to passage",
+    "general": "General notes",
+    "generalPlaceholder": "Write thoughts about this book without selecting a passage.",
+    "savedLocal": "Saved on this device.",
+    "unsaved": "Unsaved changes. Try saving again.",
+    "saveNotes": "Save notes",
+    "quoteMoved": "Book text has changed. This saved quote is preserved, but its location needs review.",
+    "comment": "Comment",
+    "saveChanges": "Save changes",
+    "editHighlight": "Edit highlight",
+    "removeHighlight": "Remove highlight",
+    "panelLabel": "Notes for {{title}}",
+    "panelHeading": "{{title}} · Notes",
+    "move": "Move book notes",
+    "moveHint": "Drag to move. Use arrow keys when focused; Home resets position.",
+    "close": "Close notes",
+    "resize": "Resize book notes",
+    "resizeHint": "Drag to resize, or focus and use arrow keys."
+  },
+  "colorKey": {
+    "title": "Color key",
+    "unsavedShort": "unsaved changes",
+    "intro": "Give each color your own meaning for this book. Labels start blank.",
+    "labelAria": "{{name}} color label",
+    "labelPlaceholder": "Your label",
+    "removeAria": "Remove {{name}} from color key",
+    "removeTitle": "Remove from color key",
+    "empty": "Your color key is empty. Add a color below when you need one.",
+    "removeNote": "Removing a color keeps existing highlights and its saved label.",
+    "restoreLabel": "Add a removed color",
+    "choose": "Choose a color",
+    "addColor": "Add color",
+    "customHex": "Custom color hex",
+    "addCustom": "Add custom color",
+    "hexInvalid": "Enter a 3- or 6-digit hex color.",
+    "unsaved": "Color labels have unsaved changes.",
+    "saved": "Color labels saved on this device.",
+    "save": "Save color key"
+  },
+  "colorPicker": {
+    "legend": "Highlight color",
+    "swatchAria": "{{name}} highlight",
+    "swatchAriaLabelled": "{{name}} highlight: {{label}}",
+    "hex": "Hex color",
+    "hexInvalid": "Enter a 3- or 6-digit hex color, such as #ABC or #AABBCC.",
+    "preview": "Highlight preview"
+  },
+  "color": {
+    "red": "Red",
+    "orange": "Orange",
+    "yellow": "Yellow",
+    "green": "Green",
+    "blue": "Blue",
+    "indigo": "Indigo",
+    "violet": "Violet"
+  },
+  "search": {
+    "open": "Search book & notes",
+    "panel": "Search this book and notes",
+    "heading": "Search · {{title}}",
+    "close": "Close search",
+    "query": "Words, phrase, or color label",
+    "placeholder": "Search this book and your notes",
+    "scope": "Search in",
+    "scopeAll": "Book and notes",
+    "scopeBook": "Book text",
+    "scopeNotes": "My notes and theme labels",
+    "help": "Matches words and phrases, including your color labels. This searches only the open book; AI recall handles broader searches by meaning.",
+    "countOne": "1 matching passage or note",
+    "countMany": "{{n}} matching passages or notes",
+    "none": "No matches. Try another word or one of your color labels.",
+    "more": "Show more results",
+    "resultNote": "Note · {{chapter}}",
+    "resultPassage": "Passage · {{chapter}}"
+  },
+  "vault": {
+    "pending": "Notes saved locally; vault sync is pending.",
+    "syncing": "Syncing notes to the MnemoReader vault…",
+    "synced": "Notes saved in the MnemoReader vault. AI recall follows your vault permissions.",
+    "cleared": "No notes to sync. Previous note copies have been removed from the vault.",
+    "failed": "Vault sync needs attention: {{error}} Your local notes are kept.",
+    "failedPending": "Notes or note deletions are pending; vault sync failed: {{error}}",
+    "notice": "Some book notes or note deletions have not synced to the vault. AI recall may still have older details. Your local notes are kept.",
+    "retryNotes": "Retry notes sync"
+  },
+  "tile": {
+    "books": "Books",
+    "annotated": "Annotated"
   }
 }
