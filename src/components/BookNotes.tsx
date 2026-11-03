@@ -2,6 +2,7 @@ import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Book, LoadedBook } from '../lib/types';
 import {
   matchesPassage,
+  notesSettled,
   passage,
   readBookNotes,
   writeAnnotations,
@@ -441,6 +442,7 @@ export function BookNotes({ book, loaded, onJump, children }: Props) {
                   setGeneralDraft(e.target.value);
                   saveGeneral(e.target.value);
                 }}
+                onBlur={() => notesSettled(book.id)}
               />
             </label>
             {/* Saved: a green check says the change is taken into account, in

@@ -64,7 +64,7 @@
     "cancel": "Abbrechen",
     "remove": "Buch entfernen",
     "line4": "Dabei werden auch die gespeicherten Markierungen und Kommentare dieses Buchs aus MnemoReader entfernt.",
-    "line5": "Die synchronisierten Notizkopien werden ebenfalls aus dem MnemoReader-Tresor entfernt. Ist der Host nicht erreichbar, wartet das Entfernen, bis die Kartusche wieder synchronisieren kann. Bereits archivierter Buchtext bleibt im Bibliothek-Tresor."
+    "line5": "Die synchronisierten Notizkopien und der Katalogeintrag des Buchs werden ebenfalls aus dem MnemoReader-Tresor entfernt. Ist der Host nicht erreichbar, wartet das Entfernen, bis die Kartusche wieder synchronisieren kann. Bereits archivierter Buchtext bleibt im Bibliothek-Tresor."
   },
   "pdf": {
     "original": "Original-PDF",

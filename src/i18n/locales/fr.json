@@ -64,7 +64,7 @@
     "cancel": "Annuler",
     "remove": "Retirer le livre",
     "line4": "Les surlignages et commentaires enregistrés pour ce livre sont aussi supprimés de MnemoReader.",
-    "line5": "Leurs copies synchronisées sont aussi retirées du coffre MnemoReader. Si l’hôte est indisponible, ce retrait attend la prochaine synchronisation de la cartouche. Le texte du livre déjà archivé reste dans le coffre Bibliothèque."
+    "line5": "Leurs copies synchronisées et la fiche du livre au catalogue sont aussi retirées du coffre MnemoReader. Si l’hôte est indisponible, ce retrait attend la prochaine synchronisation de la cartouche. Le texte du livre déjà archivé reste dans le coffre Bibliothèque."
   },
   "pdf": {
     "original": "PDF d'origine",

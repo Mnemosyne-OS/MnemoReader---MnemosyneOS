@@ -64,7 +64,7 @@
     "cancel": "Cancelar",
     "remove": "Quitar el libro",
     "line4": "También se eliminan de MnemoReader los resaltados y comentarios guardados de este libro.",
-    "line5": "Sus copias sincronizadas también se retirarán de la bóveda de MnemoReader. Si el anfitrión no está disponible, esa retirada espera hasta que el cartucho pueda sincronizar de nuevo. El texto del libro ya archivado se queda en la bóveda Biblioteca."
+    "line5": "Sus copias sincronizadas y la ficha del libro en el catálogo también se retirarán de la bóveda de MnemoReader. Si el anfitrión no está disponible, esa retirada espera hasta que el cartucho pueda sincronizar de nuevo. El texto del libro ya archivado se queda en la bóveda Biblioteca."
   },
   "pdf": {
     "original": "PDF original",

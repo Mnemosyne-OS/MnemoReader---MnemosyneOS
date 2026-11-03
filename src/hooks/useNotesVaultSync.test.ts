@@ -2,7 +2,7 @@
 import { act, createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { useBookVaultStatus } from './useNotesVaultSync';
+import { GENERAL_IDLE_MS, kickDelay, useBookVaultStatus } from './useNotesVaultSync';
 import { markVaultSyncError, markVaultSyncPending } from '../lib/notesVaultSync';
 import { notesKey } from '../lib/annotations';
 import type { Book } from '../lib/types';
@@ -27,4 +27,12 @@ it("shows a book's own sync state, not another book's failure", () => {
   act(() => markVaultSyncError([{ id: 'other' } as Book], new Error('offline')));
   expect(host.textContent).toBe('vault.pending');
   act(() => root.unmount());
+});
+
+it('waits GENERAL_IDLE_MS (20 s) for typing, the default for anything else', () => {
+  expect(GENERAL_IDLE_MS).toBe(20_000);
+  expect(kickDelay(new CustomEvent('x', { detail: { bookId: 'b', typing: true } }))).toBe(20_000);
+  expect(kickDelay(new CustomEvent('x', { detail: { bookId: 'b' } }))).toBeUndefined();
+  expect(kickDelay(new Event('online'))).toBeUndefined();
+  expect(kickDelay()).toBeUndefined();
 });

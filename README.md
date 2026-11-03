@@ -123,7 +123,7 @@ src/
     └── Icons.tsx    Toast.tsx
 ```
 
-Tests run with `pnpm test` (190 of them in 21 files: the sentence splitter, the
+Tests run with `pnpm test` (198 of them in 21 files: the sentence splitter, the
 language match, the lead policy, the seven locale files, the highlights and notes,
 the search, and the vault sync against a fake of the host's real behaviour).
 

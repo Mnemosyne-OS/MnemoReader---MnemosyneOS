@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  NOTES_CHANGED,
+  notesSettled,
   matchesPassage,
   notesKey,
   passage,
@@ -128,4 +130,15 @@ describe('corrupt saved notes are never overwritten', () => {
     expect(write).toThrow();
     expect(localStorage.getItem(notesKey('bad'))).toBe('{broken');
   });
+});
+
+it('marks a general-notes save as typing, and leaving the field as settled', () => {
+  const seen: unknown[] = [];
+  const on = (e: Event) => seen.push((e as CustomEvent).detail);
+  window.addEventListener(NOTES_CHANGED, on);
+  writeGeneralNote('typed', 'a');
+  notesSettled('typed');
+  writeAnnotations('typed', []);
+  window.removeEventListener(NOTES_CHANGED, on);
+  expect(seen).toEqual([{ bookId: 'typed', typing: true }, { bookId: 'typed' }, { bookId: 'typed' }]);
 });

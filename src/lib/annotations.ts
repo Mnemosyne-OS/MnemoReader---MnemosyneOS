@@ -16,8 +16,10 @@ export interface Annotation {
 
 export const notesKey = (bookId: string) => `mnemoreader.notes.${bookId}`;
 export const NOTES_CHANGED = 'mnemoreader:notes-changed';
-function changed(bookId: string): void {
-  window.dispatchEvent(new CustomEvent(NOTES_CHANGED, { detail: { bookId } }));
+/** `typing`: the general notes, saved at every keystroke; the vault sync waits
+ *  for the typing to stop rather than writing (and embedding) at each pause. */
+function changed(bookId: string, typing = false): void {
+  window.dispatchEvent(new CustomEvent(NOTES_CHANGED, { detail: { bookId, ...(typing ? { typing: true } : {}) } }));
 }
 
 export function passage(
@@ -127,10 +129,15 @@ export function writeAnnotations(bookId: string, notes: Annotation[]): void {
   changed(bookId);
 }
 
+/** The person left the general notes field: sync now, the typing is over. */
+export function notesSettled(bookId: string): void {
+  changed(bookId);
+}
+
 export function writeGeneralNote(bookId: string, general: string): void {
   const existing = readBookNotes(bookId);
   localStorage.setItem(notesKey(bookId), JSON.stringify({ ...existing, general }));
-  changed(bookId);
+  changed(bookId, true);
 }
 
 export function writeColorLabels(bookId: string, colorLabels: Record<string, string>): void {

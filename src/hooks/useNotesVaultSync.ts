@@ -15,6 +15,14 @@ import { serialized, syncLoop } from '../lib/syncLoop';
 import type { Book } from '../lib/types';
 
 /** One notes pass at a time for the whole app, whichever loop asks (syncLoop.ts serialized). */
+/** How long the general notes wait after the last keystroke before the vault sync. */
+export const GENERAL_IDLE_MS = 20_000;
+
+/** The wait a notes change asks for: typing waits for its end, anything else the loop's default. */
+export function kickDelay(event?: Event): number | undefined {
+  return event instanceof CustomEvent && event.detail?.typing === true ? GENERAL_IDLE_MS : undefined;
+}
+
 const notesPass = serialized((vault: string, books: Book[]) => syncBookNotes(vault, books));
 
 /**
@@ -47,7 +55,10 @@ export function useNotesVaultSync(books: Book[], vault: string | null): void {
     const kick = (event?: Event) => {
       if (event instanceof CustomEvent && typeof event.detail?.bookId === 'string')
         markVaultSyncPending(event.detail.bookId);
-      loop.kick();
+      // General notes are saved at each keystroke: each pause used to cost a
+      // vault write and an embedding (24 for 9 words, logic review). They go
+      // once the typing stops for GENERAL_IDLE_MS, or when the field is left.
+      loop.kick(kickDelay(event));
     };
     kick();
     window.addEventListener(NOTES_CHANGED, kick);

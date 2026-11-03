@@ -20,6 +20,7 @@ import { IconBook } from './components/Icons';
 import { saveText, loadText, deleteText } from './lib/textStore';
 import { ReaderAgentActions } from './components/ReaderAgentActions';
 import { removeBookNotes } from './lib/notesVaultSync';
+import { removeBookCatalogue } from './lib/catalogueSync';
 import { useNotesVaultSync } from './hooks/useNotesVaultSync';
 import { NotesVaultNotice } from './components/NotesVaultNotice';
 
@@ -331,7 +332,9 @@ export default function App() {
   const requestDelete = useCallback((book: Book) => { setConfirmDelete(book); }, []);
 
   const deleteBook = useCallback((book: Book) => {
-    try { removeBookNotes(book.id); } catch (err) {
+    // The catalogue removal is queued first: if the notes then cannot be
+    // removed the book stays, and a queued book still in the library is kept.
+    try { removeBookCatalogue(book); removeBookNotes(book.id); } catch (err) {
       console.warn('[MnemoReader] book notes could not be removed; the book is kept', book.id, err);
       notify('err', t('toast.notesRemoveFailed')); return;
     }

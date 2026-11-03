@@ -135,3 +135,42 @@ it('serialized runs calls one after the other, even after a failure', async () =
   expect(overlap).toBe(false);
   expect(order).toEqual(['start a', 'end a', 'start b', 'end b']);
 });
+
+// General notes are saved at each keystroke: each pause used to cost a vault
+// write and an embedding (24 for 9 words). Typing now waits for its end.
+it('typing kicks wait for the typing to stop, a prompt kick is never held back by them', async () => {
+  const pass = vi.fn(() => Promise.resolve(null));
+  const loop = syncLoop(pass, 1200);
+  for (let i = 0; i < 10; i++) {
+    loop.kick(20_000);
+    await vi.advanceTimersByTimeAsync(1500);
+  }
+  expect(pass).not.toHaveBeenCalled();
+  await vi.advanceTimersByTimeAsync(20_000);
+  expect(pass).toHaveBeenCalledTimes(1);
+  // A highlight saved, then more typing: the highlight still goes at 1.2 s.
+  loop.kick();
+  loop.kick(20_000);
+  await vi.advanceTimersByTimeAsync(1200);
+  expect(pass).toHaveBeenCalledTimes(2);
+  loop.stop();
+});
+
+it('a typing kick during a pass waits its own delay after it, not 0', async () => {
+  let release: () => void = () => {};
+  const pass = vi.fn(async () => {
+    await new Promise<void>((r) => (release = r));
+    return null;
+  });
+  const loop = syncLoop(pass, 1200);
+  loop.kick();
+  await vi.advanceTimersByTimeAsync(1200);
+  loop.kick(20_000);
+  release();
+  await vi.advanceTimersByTimeAsync(19_000);
+  expect(pass).toHaveBeenCalledTimes(1);
+  await vi.advanceTimersByTimeAsync(1000);
+  expect(pass).toHaveBeenCalledTimes(2);
+  release();
+  loop.stop();
+});

@@ -64,7 +64,7 @@
     "cancel": "Cancel",
     "remove": "Remove book",
     "line4": "This also removes this book’s saved highlights and comments from MnemoReader.",
-    "line5": "Its synced note copies will also be removed from the MnemoReader vault. If the host is unavailable, that removal waits until the cartridge can sync again. Previously archived book text stays in the Library vault."
+    "line5": "Its synced note copies and its catalogue entry will also be removed from the MnemoReader vault. If the host is unavailable, that removal waits until the cartridge can sync again. Previously archived book text stays in the Library vault."
   },
   "pdf": {
     "original": "Original PDF",

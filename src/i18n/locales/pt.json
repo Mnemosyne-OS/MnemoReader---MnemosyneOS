@@ -64,7 +64,7 @@
     "cancel": "Cancelar",
     "remove": "Remover o livro",
     "line4": "Também remove do MnemoReader os destaques e comentários guardados deste livro.",
-    "line5": "As cópias sincronizadas das notas também serão removidas do cofre MnemoReader. Se o anfitrião não estiver disponível, essa remoção aguarda até o cartucho poder sincronizar de novo. O texto do livro já arquivado fica no cofre Biblioteca."
+    "line5": "As cópias sincronizadas das notas e a entrada do livro no catálogo também serão removidas do cofre MnemoReader. Se o anfitrião não estiver disponível, essa remoção aguarda até o cartucho poder sincronizar de novo. O texto do livro já arquivado fica no cofre Biblioteca."
   },
   "pdf": {
     "original": "PDF original",

@@ -17,8 +17,13 @@ export const RETRY_FIRST_MS = 60_000;
 export const RETRY_MAX_MS = 600_000;
 
 export interface SyncLoop {
-  /** Something changed: run a pass after `debounceMs`, and forget the backoff. */
-  kick(): void;
+  /**
+   * Something changed: run a pass after `delayMs` (default `debounceMs`) and
+   * forget the backoff. A later kick re-arms the wait, except that a longer one
+   * never delays a pass a shorter kick already asked for: typing in the
+   * general notes must not hold back a highlight saved just before.
+   */
+  kick(delayMs?: number): void;
   /** Cancel every timer; a pass in flight finishes, nothing follows it. */
   stop(): void;
 }
@@ -30,14 +35,21 @@ export interface SyncLoop {
 export function syncLoop(pass: () => Promise<string | null>, debounceMs: number): SyncLoop {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let running = false;
-  let dirty = false;
+  /** A kick that came during a pass: the delay the next pass waits, or null. */
+  let dirty: number | null = null;
+  /** The timer armed is a prompt one (a kick at `debounceMs` or less). */
+  let prompt = false;
   let stopped = false;
   let failures = 0;
   let lastFailure: string | null = null;
 
-  const arm = (ms: number) => {
+  const arm = (ms: number, isPrompt = false) => {
     clearTimeout(timer);
-    timer = setTimeout(() => void runNow(), ms);
+    prompt = isPrompt;
+    timer = setTimeout(() => {
+      prompt = false;
+      void runNow();
+    }, ms);
   };
 
   async function runNow(): Promise<void> {
@@ -54,9 +66,10 @@ export function syncLoop(pass: () => Promise<string | null>, debounceMs: number)
       running = false;
     }
     if (stopped) return;
-    if (dirty) {
-      dirty = false;
-      arm(0);
+    if (dirty !== null) {
+      const wait = dirty;
+      dirty = null;
+      arm(wait, wait <= debounceMs);
       return;
     }
     if (failure === null) {
@@ -73,12 +86,14 @@ export function syncLoop(pass: () => Promise<string | null>, debounceMs: number)
   }
 
   return {
-    kick() {
+    kick(delayMs?: number) {
       if (stopped) return;
       // The next failure then differs from the last one: back to 1 minute.
       lastFailure = null;
-      if (running) dirty = true;
-      else arm(debounceMs);
+      const wait = delayMs ?? debounceMs;
+      const isPrompt = wait <= debounceMs;
+      if (running) dirty = dirty === null ? wait : Math.min(dirty, wait);
+      else if (!(prompt && !isPrompt)) arm(wait, isPrompt);
     },
     stop() {
       stopped = true;

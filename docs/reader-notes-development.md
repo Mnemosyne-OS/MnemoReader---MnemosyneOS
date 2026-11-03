@@ -15,6 +15,9 @@
   part size and the 15 s deadline on every host call.
 - `syncLoop` decides when a pass runs: on a change, never on a clock, with a growing
   delay while a pass fails the same way. The hooks wire it to the UI events.
+  General notes are saved locally at each keystroke but go to the vault 20 s after
+  the typing stops, or as soon as the field is left: each pause used to cost a
+  vault write and an embedding. A highlight is never held back by that wait.
 
 The original library, extraction, and audio paths remain in their existing modules.
 
@@ -36,10 +39,15 @@ journal or deletion queue is reset with a warning and rebuilt from the markers.
 
 Catalogue migration accepts untagged legacy records only when their title, author,
 and format exactly match the current book. It does not guess reversed names or make
-book-specific corrections. Ambiguous old records require explicit user review.
-Deleting a local book's notes uses an explicit deletion queue; a book missing on
-another device is not deletion consent. Catalogue records and archived book text
-are not purged by note deletion.
+book-specific corrections. Every other untagged legacy record (the first versions
+wrote one per extraction snapshot, some with title and author swapped) is forgotten
+ONCE per vault: only on a complete listing, only after a pass where every current
+book got its tagged row, and only rows of the exact legacy shape (Tony's choice,
+2026-11-03: no screen could review them).
+Deleting a book uses explicit deletion queues, one for its notes and one for its
+catalogue row; a book missing on another device is not deletion consent. A queued
+book still in the library (a deletion that did not complete) keeps its row.
+Archived book text in the Library vault is never purged by the reader.
 
 The host lists at most the 200 newest entries of the vault. A row past that listing
 cannot be verified, so it is never forgotten: a deleted book whose copies are past
